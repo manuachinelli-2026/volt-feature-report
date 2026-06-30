@@ -11,6 +11,13 @@
   const SEG_ORDER = ["Free", "Premium", "Employee"];
   const METRIC_LABEL = { m: "Promedio", me: "Promedio sin outlier", md: "Mediana" };
 
+  const U = D.users || {};
+  const who = (tu) => {
+    const u = U[tu];
+    if (!u) return `<code>${tu}</code>`;
+    return `<b>${u.n}</b> <span style="color:var(--muted)">+${u.p}</span>`;
+  };
+
   const fmt = (n) => {
     if (n == null) return "—";
     if (n >= 1e6) return (n / 1e6).toFixed(2).replace(/\.?0+$/, "") + "M";
@@ -89,7 +96,7 @@
   (function () {
     const emp = D.shortcuts.find(s => s.seg === "Employee");
     document.getElementById("sc-note").innerHTML =
-      `Premium domina los atajos en absoluto (promedio ${full(D.shortcuts.find(s=>s.seg==='Premium').m)}/usuario). En Employee, el usuario <code style="background:#f3f5f7;padding:1px 5px;border-radius:4px">${emp.tu}</code> concentra el ${emp.tp}% — sin él, el promedio baja de ${full(emp.m)} a <b>${full(emp.me)}</b>.`;
+      `Premium domina los atajos en absoluto (promedio ${full(D.shortcuts.find(s=>s.seg==='Premium').m)}/usuario). En Employee, ${who(emp.tu)} concentra el ${emp.tp}% — sin esa persona, el promedio baja de ${full(emp.m)} a <b>${full(emp.me)}</b>.`;
   })();
 
   /* ---- chart: groups × segment (toggle metric) ---- */
@@ -180,7 +187,7 @@
           <div><div class="lbl">Promedio crudo</div><div class="val">${full(o.m)}</div></div>
           <div class="real"><div class="lbl">Real (sin outlier)</div><div class="val">${full(o.me)}</div></div>
         </div>
-        <div class="who">1 usuario <code>${o.tu}</code> concentra el <b>${o.tp}%</b> del uso${o.md != null ? ` · mediana ${full(o.md)}` : ""}.</div>
+        <div class="who">${who(o.tu)} concentra el <b>${o.tp}%</b> del uso${o.md != null ? ` · mediana ${full(o.md)}` : ""}.</div>
       </div>`).join("");
   })();
 
