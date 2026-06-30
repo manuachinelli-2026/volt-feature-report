@@ -114,6 +114,17 @@
     tbody tr:hover{background:#fafbfc}
     .seg-dot{display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:6px;vertical-align:middle}
     .flag{display:inline-block;font-size:11px;font-weight:700;padding:2px 7px;border-radius:5px;background:#fff3e0;color:#c2710c;border:1px solid #ffd9a8}
+    /* tbl2 — one metric at a time, segment columns with bars */
+    .tbl2{min-width:720px}
+    .tbl2 thead th{cursor:default}
+    .tbl2 th.seg-h{text-align:left;cursor:pointer}
+    .tbl2 th.seg-h .dot{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:6px;vertical-align:middle}
+    .tbl2 td{vertical-align:middle}
+    .tbl2 td.seg-cell{text-align:left;min-width:150px}
+    .cellbar{height:7px;background:#eef0f3;border-radius:4px;overflow:hidden}
+    .cellbar span{display:block;height:100%;border-radius:4px}
+    .cellval{margin-top:5px;font-variant-numeric:tabular-nums;font-weight:700;font-size:13.5px}
+    .cellval .cu{font-weight:500;color:var(--faint);font-size:11px;margin-left:5px}
 
     /* outlier cards */
     .out-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
@@ -237,9 +248,16 @@
       <div class="sec-head">
         <div class="sec-tag">Detalle</div>
         <h2>Tabla por funcionalidad y segmento</h2>
-        <p>Usuarios, promedio y mediana por segmento. La marca <span class="flag">outlier</span> aparece cuando un solo usuario concentra ≥30% del uso. Click para ordenar.</p>
+        <p>Una métrica por vez, comparada entre los 3 segmentos. La barra muestra la magnitud relativa dentro de cada columna; abajo, el valor y la cantidad de usuarios. <span class="flag">outlier</span> = un solo usuario concentra ≥30% del uso. Click en un segmento para ordenar.</p>
       </div>
-      <div class="table-wrap"><table id="tbl"><thead></thead><tbody></tbody></table></div>
+      <div class="controls" style="justify-content:flex-end">
+        <div class="toggle" id="tbl-toggle">
+          <button data-m="m" class="on">Promedio</button>
+          <button data-m="me">Sin outlier</button>
+          <button data-m="md">Mediana</button>
+        </div>
+      </div>
+      <div class="table-wrap"><table id="tbl" class="tbl2"><thead></thead><tbody></tbody></table></div>
     </section>
 
     <section id="outliers">

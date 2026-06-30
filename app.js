@@ -156,43 +156,46 @@
   drawGroups(); reg(grpChart);
   bindToggle("grp-toggle", (m) => { grpMetric = m; drawGroups(); });
 
-  /* ---- table ---- */
+  /* ---- table (one metric at a time, segment columns with bars) ---- */
   (function () {
     const thead = document.querySelector("#tbl thead");
     const tbody = document.querySelector("#tbl tbody");
-    const cols = [
-      { k: "name", t: "Funcionalidad", grp: true },
-      { k: "Free_u", t: "Free · u" }, { k: "Free_m", t: "Free · prom" }, { k: "Free_md", t: "Free · med" },
-      { k: "Premium_u", t: "Prem · u" }, { k: "Premium_m", t: "Prem · prom" }, { k: "Premium_md", t: "Prem · med" },
-      { k: "Employee_u", t: "Emp · u" }, { k: "Employee_m", t: "Emp · prom" }, { k: "Employee_md", t: "Emp · med" },
-      { k: "flag", t: "" }
-    ];
-    const rows = D.groups.map(g => {
-      const maxTp = Math.max(...SEG_ORDER.map(k => g.seg[k] ? g.seg[k].tp : 0));
-      const r = { name: g.name, _total: totalOf(g), _maxTp: maxTp };
-      SEG_ORDER.forEach(k => { const s = g.seg[k] || {}; r[k + "_u"] = s.u || 0; r[k + "_m"] = s.m || 0; r[k + "_md"] = s.md || 0; });
-      return r;
-    });
-    thead.innerHTML = "<tr>" + cols.map(c => `<th class="${c.grp ? "grp" : ""}" data-k="${c.k}">${c.t}</th>`).join("") + "</tr>";
-    let sk = "_total", sd = -1;
-    function seg_dot(k) { return `<span class="seg-dot" style="background:${SEG[k]}"></span>`; }
+    const rows = D.groups.map(g => ({ name: g.name, seg: g.seg, _total: totalOf(g), _maxTp: Math.max(...SEG_ORDER.map(k => g.seg[k] ? g.seg[k].tp : 0)) }));
+    let metric = "m", sortKey = "_total", sortDir = -1;
+
+    thead.innerHTML = "<tr>" +
+      `<th class="grp" data-k="name">Funcionalidad</th>` +
+      SEG_ORDER.map(k => `<th class="seg-h" data-k="${k}"><span class="dot" style="background:${SEG[k]}"></span>${k}</th>`).join("") +
+      `<th data-k="flag"></th></tr>`;
+
+    function colMax(k) { return Math.max(1, ...rows.map(r => r.seg[k] ? (r.seg[k][metric] || 0) : 0)); }
+    function sortVal(r) { return sortKey === "name" ? r.name : sortKey === "_total" ? r._total : (r.seg[sortKey] ? (r.seg[sortKey][metric] || 0) : 0); }
+
     function draw() {
-      const sorted = [...rows].sort((a, b) => typeof a[sk] === "string" ? sd * a[sk].localeCompare(b[sk]) : sd * (a[sk] - b[sk]));
-      tbody.innerHTML = sorted.map(r => `<tr>
-        <td>${r.name}</td>
-        <td class="mono">${full(r.Free_u)}</td><td class="mono">${full(r.Free_m)}</td><td class="mono" style="color:${COL.muted}">${full(r.Free_md)}</td>
-        <td class="mono">${full(r.Premium_u)}</td><td class="mono">${full(r.Premium_m)}</td><td class="mono" style="color:${COL.muted}">${full(r.Premium_md)}</td>
-        <td class="mono">${full(r.Employee_u)}</td><td class="mono">${full(r.Employee_m)}</td><td class="mono" style="color:${COL.muted}">${full(r.Employee_md)}</td>
-        <td>${r._maxTp >= 30 ? '<span class="flag">outlier</span>' : ""}</td>
-      </tr>`).join("");
+      const maxes = {}; SEG_ORDER.forEach(k => maxes[k] = colMax(k));
+      const sorted = [...rows].sort((a, b) => { const av = sortVal(a), bv = sortVal(b); return typeof av === "string" ? sortDir * av.localeCompare(bv) : sortDir * (av - bv); });
+      tbody.innerHTML = sorted.map(r => {
+        const cells = SEG_ORDER.map(k => {
+          const s = r.seg[k];
+          if (!s) return `<td class="seg-cell"><span style="color:var(--faint)">—</span></td>`;
+          const v = s[metric] || 0, w = Math.max(2, (v / maxes[k]) * 100);
+          return `<td class="seg-cell">
+            <div class="cellbar"><span style="width:${w}%;background:${SEG[k]}"></span></div>
+            <div class="cellval">${full(v)}<span class="cu">${s.u} u</span></div>
+          </td>`;
+        }).join("");
+        return `<tr><td>${r.name}</td>${cells}<td>${r._maxTp >= 30 ? '<span class="flag">outlier</span>' : ""}</td></tr>`;
+      }).join("");
     }
     thead.querySelectorAll("th").forEach(th => {
+      const k = th.dataset.k; if (k === "flag") return;
       th.setAttribute("tabindex", "0"); th.setAttribute("aria-sort", "none");
-      const go = () => { const k = th.dataset.k; if (k === "flag") return; if (k === sk) sd *= -1; else { sk = k; sd = k === "name" ? 1 : -1; } thead.querySelectorAll("th").forEach(t => t.setAttribute("aria-sort", "none")); th.setAttribute("aria-sort", sd === 1 ? "ascending" : "descending"); draw(); };
+      const go = () => { if (k === sortKey) sortDir *= -1; else { sortKey = k; sortDir = k === "name" ? 1 : -1; } thead.querySelectorAll("th").forEach(t => t.setAttribute("aria-sort", "none")); th.setAttribute("aria-sort", sortDir === 1 ? "ascending" : "descending"); draw(); };
       th.addEventListener("click", go);
       th.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); go(); } });
     });
     draw();
+    bindToggle("tbl-toggle", (m) => { metric = m; draw(); });
   })();
 
   /* ---- outlier cards ---- */
