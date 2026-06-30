@@ -70,6 +70,18 @@
     .kf-card .ic{font-size:21px;line-height:1.1}
     .kf-card .nm{font-weight:700;font-size:15px;letter-spacing:-.01em}
     .kf-card .ds{font-size:12px;color:var(--muted);margin-top:3px;line-height:1.42}
+    .kf-trend{display:flex;align-items:center;justify-content:space-between;gap:10px;border-top:1px solid var(--line);padding-top:11px}
+    .kf-trend .spk{line-height:0}
+    .kf-badge{font-size:11px;font-weight:700;padding:3px 8px;border-radius:6px;white-space:nowrap}
+    .kf-badge.up{background:#eefce4;color:#3a9e1e}
+    .kf-badge.down{background:#fdeaea;color:#d23b3b}
+    .kf-badge.new{background:#fff3e0;color:#c2710c;border:1px solid #ffd9a8}
+    .kf-summary{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:22px}
+    @media(max-width:760px){.kf-summary{grid-template-columns:1fr}}
+    .ts-item{background:var(--bg2);border:1px solid var(--line);border-radius:var(--radius-sm);padding:12px 14px;font-size:12.5px;color:var(--text);line-height:1.5}
+    .ts-item .ts-h{display:block;font-weight:700;font-size:11px;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);margin-bottom:5px}
+    .ts-item b{color:var(--volt-deep)}
+    .ts-new{border-left:3px solid var(--employee)} .ts-up{border-left:3px solid var(--free)} .ts-flat{border-left:3px solid var(--faint)}
     .kf-seg{display:flex;flex-direction:column;gap:9px;border-top:1px solid var(--line);padding-top:12px}
     .kf-row{display:grid;grid-template-columns:74px 1fr auto;align-items:center;gap:10px;font-size:12.5px}
     .kf-row .lab{font-weight:600;display:flex;align-items:center;gap:6px}
@@ -186,6 +198,7 @@
         <h2>Funcionalidades clave</h2>
         <p>Las funcionalidades estrella del <a href="https://github.com/manuachinelli-2026/Handbook-volt" target="_blank" rel="noopener" style="color:var(--volt-deep);font-weight:600">handbook de Volt</a>, priorizadas acá. Promedio de usos por usuario en cada segmento, con el número real (sin el usuario outlier).</p>
       </div>
+      <div id="kf-summary" class="kf-summary"></div>
       <div class="controls" style="justify-content:flex-end">
         <div class="toggle" id="kf-toggle">
           <button data-m="m" class="on">Promedio</button>

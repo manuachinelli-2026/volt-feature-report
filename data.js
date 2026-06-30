@@ -15,7 +15,24 @@ window.VOLT_DATA = {
     periodEnd: "2026-06-30",
     generatedAt: "2026-06-30",
     totalEvents: 4855363,           // eventos de usuarios identificados (Free+Premium+Employee)
-    activeIdentified: 688            // base activa según dashboard de Volt (~626 en eventos)
+    activeIdentified: 688,           // base activa según dashboard de Volt (~626 en eventos)
+    months: ["Ene", "Feb", "Mar", "Abr", "May", "Jun"]
+  },
+
+  // TENDENCIA — usuarios activos por mes (ene→jun) por funcionalidad clave.
+  // null = la funcionalidad / su tracking no existía ese mes (señal de "nueva").
+  keyTrends: {
+    "Transcripción de voz":      [74, 93, 165, 244, 315, 308],
+    "Atajos de teclado":         [null, 48, 162, 237, 311, 308],
+    "Mensajes programados":      [41, 67, 143, 206, 297, 259],
+    "Tareas y recordatorios":    [58, 37, 80, 99, 144, 89],
+    "Listas y workspaces":       [61, 75, 141, 207, 288, 249],
+    "Broadcast":                 [4, 12, 18, 22, 41, 30],
+    "/meet y /zoom":             [null, null, null, 11, 81, 63],
+    "App Store / Integraciones": [null, null, null, 4, 95, 94],
+    "Modo privado":              [null, null, 21, 35, 35, 34],
+    "IA (Claude / ChatGPT)":     [null, null, null, 30, 108, 107],
+    "Nuevo chat":                [36, 43, 33, 34, 36, 31]
   },
 
   // Tamaño y peso de cada segmento (usuarios identificados, 180d)

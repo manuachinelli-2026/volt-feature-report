@@ -46,7 +46,40 @@
       <div class="row"><span>Eventos / usuario</span><b>${full(s.perUser)}</b></div>
     </div>`).join("");
 
-  /* ---- KEY FEATURES (handbook) ---- */
+  /* ---- KEY FEATURES (handbook) + trend ---- */
+  const MONTHS = (D.meta.months || []);
+  function trendInfo(name) {
+    const t = (D.keyTrends || {})[name];
+    if (!t) return null;
+    const idx = t.map((v, i) => v == null ? -1 : i).filter(i => i >= 0);
+    if (!idx.length) return null;
+    const firstIdx = idx[0], lastIdx = idx[idx.length - 1];
+    const first = t[firstIdx], last = t[lastIdx];
+    const isNew = firstIdx >= 2;             // apareció en marzo o después
+    const pct = first ? Math.round((last / first - 1) * 100) : 0;
+    return { t, firstIdx, lastIdx, first, last, isNew, pct };
+  }
+  function spark(t, color) {
+    const W = 120, H = 30, P = 3;
+    const nn = t.filter(v => v != null);
+    const mn = Math.min(...nn), mx = Math.max(...nn);
+    const span = mx - mn || 1, n = t.length;
+    const pts = [];
+    t.forEach((v, i) => {
+      if (v == null) return;
+      const x = (i / (n - 1)) * (W - 2 * P) + P;
+      const y = H - P - ((v - mn) / span) * (H - 2 * P);
+      pts.push([x, y]);
+    });
+    const line = pts.map((p, i) => (i ? "L" : "M") + p[0].toFixed(1) + " " + p[1].toFixed(1)).join(" ");
+    const area = `M${pts[0][0].toFixed(1)} ${H} ` + pts.map(p => "L" + p[0].toFixed(1) + " " + p[1].toFixed(1)).join(" ") + ` L${pts[pts.length-1][0].toFixed(1)} ${H} Z`;
+    const last = pts[pts.length - 1];
+    return `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" aria-hidden="true">
+      <path d="${area}" fill="${color}1f"/>
+      <path d="${line}" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      <circle cx="${last[0].toFixed(1)}" cy="${last[1].toFixed(1)}" r="2.6" fill="${color}"/>
+    </svg>`;
+  }
   let kfMetric = "m";
   function renderKF() {
     document.getElementById("keyfeatures").innerHTML = D.keyFeatures.map(f => {
@@ -62,14 +95,43 @@
           <span class="val">${full(v)} <span class="u">${s.u}u</span></span>
         </div>`;
       }).join("");
+      const ti = trendInfo(f.name);
+      let trendHTML = "";
+      if (ti) {
+        const up = ti.pct >= 0;
+        const color = ti.isNew ? "#c2710c" : (up ? "#3a9e1e" : "#d23b3b");
+        const badge = ti.isNew
+          ? `<span class="kf-badge new">🆕 Nueva · ${MONTHS[ti.firstIdx]}</span>`
+          : `<span class="kf-badge ${up ? "up" : "down"}">${up ? "▲" : "▼"} ${Math.abs(ti.pct)}%</span>`;
+        trendHTML = `<div class="kf-trend"><span class="spk">${spark(ti.t, color)}</span>${badge}</div>`;
+      }
       return `<div class="kf-card">
         <div class="top"><span class="ic">${f.icon}</span><div><div class="nm">${f.name}</div><div class="ds">${f.desc}</div></div></div>
+        ${trendHTML}
         <div class="kf-seg">${rows}</div>
       </div>`;
     }).join("");
   }
   renderKF();
   bindToggle("kf-toggle", (m) => { kfMetric = m; renderKF(); });
+
+  /* trend summary banner */
+  (function () {
+    const el = document.getElementById("kf-summary");
+    if (!el) return;
+    const news = [], growers = [], decliners = [];
+    D.keyFeatures.forEach(f => {
+      const ti = trendInfo(f.name); if (!ti) return;
+      if (ti.isNew) news.push(`${f.icon} ${f.name}`);
+      else if (ti.pct >= 60) growers.push({ n: f.name, ic: f.icon, p: ti.pct });
+      else if (ti.pct <= 0) decliners.push({ n: f.name, ic: f.icon, p: ti.pct });
+    });
+    growers.sort((a, b) => b.p - a.p);
+    el.innerHTML =
+      `<div class="ts-item ts-new"><span class="ts-h">🆕 Nuevas</span>${news.join(" · ") || "—"}</div>` +
+      `<div class="ts-item ts-up"><span class="ts-h">📈 Más crecimiento</span>${growers.slice(0,4).map(g => `${g.ic} ${g.n} <b>+${g.p}%</b>`).join(" · ")}</div>` +
+      `<div class="ts-item ts-flat"><span class="ts-h">😴 Sin crecer</span>${decliners.map(g => `${g.ic} ${g.n}`).join(" · ") || "—"}</div>`;
+  })();
 
   /* ---- segment legend (shared) ---- */
   const segLegendHTML = SEG_ORDER.map(k => `<span><i style="background:${SEG[k]}"></i>${k}</span>`).join("");
