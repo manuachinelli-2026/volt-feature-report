@@ -80,6 +80,7 @@
       <circle cx="${last[0].toFixed(1)}" cy="${last[1].toFixed(1)}" r="2.6" fill="${color}"/>
     </svg>`;
   }
+  const METRIC_FULL = { m: "Promedio de usos por usuario", me: "Promedio sin el usuario outlier", md: "Mediana de usos por usuario" };
   let kfMetric = "m";
   function renderKF() {
     document.getElementById("keyfeatures").innerHTML = D.keyFeatures.map(f => {
@@ -103,11 +104,12 @@
         const badge = ti.isNew
           ? `<span class="kf-badge new">🆕 Nueva · ${MONTHS[ti.firstIdx]}</span>`
           : `<span class="kf-badge ${up ? "up" : "down"}">${up ? "▲" : "▼"} ${Math.abs(ti.pct)}%</span>`;
-        trendHTML = `<div class="kf-trend"><span class="spk">${spark(ti.t, color)}</span>${badge}</div>`;
+        trendHTML = `<div class="kf-trend"><span class="spk-wrap"><span class="spk">${spark(ti.t, color)}</span><span class="spk-cap">usuarios activos/mes · crecim. ene→jun</span></span>${badge}</div>`;
       }
       return `<div class="kf-card">
         <div class="top"><span class="ic">${f.icon}</span><div><div class="nm">${f.name}</div><div class="ds">${f.desc}</div></div></div>
         ${trendHTML}
+        <div class="kf-mlabel">${METRIC_FULL[kfMetric]} <span>· u = usuarios</span></div>
         <div class="kf-seg">${rows}</div>
       </div>`;
     }).join("");
