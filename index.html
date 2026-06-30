@@ -110,16 +110,19 @@
     .b-WATCH{background:rgba(255,148,77,.13);color:var(--orange);border:1px solid rgba(255,148,77,.3)}
     .b-CONSOLIDATE{background:rgba(255,148,77,.13);color:var(--orange);border:1px solid rgba(255,148,77,.3)}
     .b-RECONSIDER{background:rgba(255,93,108,.14);color:var(--red);border:1px solid rgba(255,93,108,.32)}
+    .b-REVIEW{background:rgba(255,122,162,.14);color:#ff7aa2;border:1px solid rgba(255,122,162,.32)}
 
     .legend{display:flex;flex-wrap:wrap;gap:14px;margin-top:18px;font-size:12.5px;color:var(--muted)}
     .legend span{display:inline-flex;align-items:center;gap:7px}
     .legend i{width:11px;height:11px;border-radius:3px;display:inline-block}
 
     /* RECS */
-    .recs{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
-    @media(max-width:920px){.recs{grid-template-columns:1fr}}
-    .rec-col{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:22px;display:flex;flex-direction:column;gap:14px}
+    .recs{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+    @media(max-width:1080px){.recs{grid-template-columns:repeat(2,1fr)}}
+    @media(max-width:620px){.recs{grid-template-columns:1fr}}
+    .rec-col{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:20px;display:flex;flex-direction:column;gap:13px}
     .rec-col.kill{border-top:3px solid var(--red)}
+    .rec-col.review{border-top:3px solid #ff7aa2}
     .rec-col.improve{border-top:3px solid var(--amber)}
     .rec-col.keep{border-top:3px solid var(--green)}
     .rec-col > h3{font-size:18px;display:flex;align-items:center;gap:9px}
@@ -253,7 +256,11 @@
       <div class="sec-head">
         <div class="sec-tag">Recomendaciones</div>
         <h2>Qué hacer con cada cosa</h2>
-        <p>Basado en alcance real (usuarios) + profundidad (mediana) + costo implícito de mantenimiento. La pregunta no es "¿genera eventos?" sino "¿a cuántos usuarios reales les importa?".</p>
+        <p>Regla consistente: una feature se mantiene si tiene <b>alta reach</b> (le importa a muchos) <b>o</b> <b>alta profundidad</b> (los pocos que la usan la usan mucho). Solo se mata lo que falla en <b>ambas</b> y no tiene valor estratégico. La pregunta no es "¿genera eventos?" sino "¿a quién y cuánto le importa?".</p>
+      </div>
+      <div class="callout" style="margin-top:0;margin-bottom:26px;border-color:rgba(255,122,162,.3)">
+        <div class="big" style="font-size:clamp(18px,2.4vw,22px)">⚠️ Advertencia clave: <b style="color:#ff7aa2">no hay datos de revenue</b> en este análisis.</div>
+        <p>Las decisiones de matar/mantener se basan <b>solo en uso anónimo</b>. Features de bajo alcance pero alta profundidad como <b style="color:var(--text)">HubSpot</b> y <b style="color:var(--text)">CRM/Tickets</b> pueden estar ancladas a tus cuentas más caras. Por eso <b style="color:var(--text)">no van a "matar"</b> sino a <b style="color:#ff7aa2">"revisar con datos de revenue"</b>: matar la integración que sostiene tus contratos grandes porque pocos asientos la tocan es el error clásico de survivorship.</p>
       </div>
       <div class="recs" id="recs"></div>
     </section>
@@ -270,7 +277,17 @@
         <div class="card"><h4>Base de usuarios activos</h4><p>Adopción calculada sobre <b>872 usuarios activos de producto</b> (hicieron Chat Open / Opened App / identify / fueron creados), no sobre las 2.929 sesiones totales que incluyen anónimos.</p></div>
         <div class="card"><h4>Features vs. infraestructura</h4><p>Eventos de pipeline (<code>transcription.*</code>), sincronización, identidad (<code>$set</code>, <code>$identify</code>) y telemetría se separaron en "Infraestructura" y se excluyen del scoring de matar/mantener.</p></div>
         <div class="card"><h4>Privacidad</h4><p>Repositorio público: solo datos <b>agregados y anónimos</b>. No se exponen emails ni identidades; los outliers se tratan estadísticamente por percentil.</p></div>
+        <div class="card"><h4>Cobertura de eventos</h4><p>Los 22 grupos de producto agrupan <b>3,82M</b> de los <b>5,64M</b> eventos totales. El ~32% restante es infraestructura, sincronización, identidad y telemetría — excluido a propósito del scoring de features.</p></div>
         <div class="card"><h4>Snapshot</h4><p>Foto estática al 30 jun 2026. Regenerable corriendo de nuevo las queries HogQL contra PostHog y actualizando <code>data.js</code>.</p></div>
+      </div>
+      <div class="card" style="margin-top:16px;border-color:var(--line2)">
+        <h4 style="color:var(--amber);font-family:'Space Grotesk';font-size:14.5px;margin-bottom:10px">Qué NO cubre este reporte (próximos pasos)</h4>
+        <p style="font-size:13.5px;color:var(--muted)">
+          <b style="color:var(--text)">· Tendencia temporal:</b> es un agregado de 180 días sin eje de tiempo. Un corte 30d vs 30d previos diría si cada feature crece o muere — clave para confirmar apuestas como MCP.<br/>
+          <b style="color:var(--text)">· Retención/stickiness:</b> "reach" y "mediana" son acumulados; no distinguen "probó una vez" de "usa todas las semanas". Una tasa de re-uso (% de adopters activos en 2+ semanas) volvería defendibles los juicios de "pegajosa / no engancha".<br/>
+          <b style="color:var(--text)">· Revenue / tier de cuenta:</b> sin esto, las features de bajo alcance y alta profundidad (HubSpot, CRM) no pueden decidirse. Es el dato que falta para cerrar el bucket "revisar".<br/>
+          <b style="color:var(--text)">· Confianza en n chico:</b> HubSpot (14), CRM (~14), Broadcast (~13 que envían) tienen estadísticos ruidosos. Tratar sus números como señales, no como verdades de precisión.
+        </p>
       </div>
     </section>
   </main>

@@ -1,5 +1,12 @@
 /* Volt Feature Report — render layer (ECharts + vanilla JS) */
 (function () {
+  if (!window.VOLT_DATA || !window.VOLT_DATA.meta) {
+    console.error("VOLT_DATA no cargó. Verificá que data.js cargue antes de app.js.");
+    return;
+  }
+  if (typeof window.echarts === "undefined") {
+    console.error("ECharts no disponible (CDN bloqueado?).");
+  }
   const D = window.VOLT_DATA;
   const M = D.meta;
   const ACTIVE = M.activeUsers;
@@ -17,7 +24,7 @@
   };
   const VERDICT_COLOR = {
     CRITICAL: C.green, KEEP: C.cyan, GROW: C.violet, IMPROVE: C.amber,
-    WATCH: C.orange, CONSOLIDATE: C.orange, RECONSIDER: C.red
+    WATCH: C.orange, CONSOLIDATE: C.orange, RECONSIDER: C.red, REVIEW: "#ff7aa2"
   };
 
   const fmt = (n) => {
@@ -127,10 +134,13 @@
   (function initTop() {
     renderTop("users");
     register(topChart);
-    document.querySelectorAll("#top-toggle button").forEach(btn => {
+    const tbtns = document.querySelectorAll("#top-toggle button");
+    tbtns.forEach(btn => {
+      btn.setAttribute("aria-pressed", btn.classList.contains("on") ? "true" : "false");
       btn.addEventListener("click", () => {
-        document.querySelectorAll("#top-toggle button").forEach(b => b.classList.remove("on"));
+        tbtns.forEach(b => { b.classList.remove("on"); b.setAttribute("aria-pressed", "false"); });
         btn.classList.add("on");
+        btn.setAttribute("aria-pressed", "true");
         renderTop(btn.dataset.mode);
       });
     });
@@ -162,12 +172,22 @@
         </tr>`;
       }).join("");
     }
-    document.querySelectorAll("#groups-table thead th").forEach(th => {
-      th.addEventListener("click", () => {
-        const k = th.dataset.k;
-        if (k === sortKey) sortDir *= -1;
-        else { sortKey = k; sortDir = (k === "name" || k === "verdict") ? 1 : -1; }
-        draw();
+    const ths = document.querySelectorAll("#groups-table thead th");
+    function applySort(th) {
+      const k = th.dataset.k;
+      if (k === sortKey) sortDir *= -1;
+      else { sortKey = k; sortDir = (k === "name" || k === "verdict") ? 1 : -1; }
+      ths.forEach(t => t.setAttribute("aria-sort", "none"));
+      th.setAttribute("aria-sort", sortDir === 1 ? "ascending" : "descending");
+      draw();
+    }
+    ths.forEach(th => {
+      th.setAttribute("tabindex", "0");
+      th.setAttribute("role", "columnheader");
+      th.setAttribute("aria-sort", "none");
+      th.addEventListener("click", () => applySort(th));
+      th.addEventListener("keydown", (e) => {
+        if (e.key === "Enter" || e.key === " ") { e.preventDefault(); applySort(th); }
       });
     });
     draw();
@@ -215,6 +235,8 @@
           show: true, position: "right", color: C.text, fontSize: 11, fontFamily: "Inter",
           formatter: (p) => groups[p.dataIndex].name, distance: 6
         },
+        labelLayout: { hideOverlap: true, moveOverlap: "shiftY" },
+        emphasis: { focus: "self", label: { show: true } },
         markArea: {
           silent: true, itemStyle: { color: "rgba(255,93,108,.05)" },
           data: [[{ xAxis: 0, yAxis: 1 }, { xAxis: 25, yAxis: 6 }]]
@@ -234,10 +256,11 @@
   /* ---------- Recommendations ---------- */
   (function renderRecs() {
     const cols = [
-      { key: "kill", cls: "kill", title: "🔴 Matar / replantear", items: D.recommendations.kill },
+      { key: "kill", cls: "kill", title: "🔴 Matar (seguro)", items: D.recommendations.kill },
+      { key: "review", cls: "review", title: "🩷 Revisar con revenue", items: D.recommendations.review },
       { key: "improve", cls: "improve", title: "🟡 Mejorar / vigilar", items: D.recommendations.improve },
       { key: "keep", cls: "keep", title: "🟢 Mantener / invertir", items: D.recommendations.keep }
-    ];
+    ].filter(c => Array.isArray(c.items) && c.items.length);
     document.getElementById("recs").innerHTML = cols.map(c => `
       <div class="rec-col ${c.cls}">
         <h3>${c.title}</h3>
@@ -248,5 +271,18 @@
             <div class="rw">${it.why}</div>
           </div>`).join("")}
       </div>`).join("");
+  })();
+
+  /* ---------- accessibility: chart text alternatives ---------- */
+  (function chartA11y() {
+    const labels = {
+      "chart-outlier": "Gráfico de barras horizontales comparando media, media recortada y mediana de usos por usuario en las features más usadas; muestra cómo los outliers inflan la media. Los datos exactos están en la tabla de grupos más abajo.",
+      "chart-top": "Gráfico de barras de las features más usadas, alternable entre alcance (usuarios) y volumen (eventos). Datos en la tabla de grupos.",
+      "chart-map": "Mapa de dispersión de decisión: eje X alcance (% de usuarios), eje Y profundidad (mediana de usos por usuario), tamaño de burbuja según volumen de eventos. La tabla de grupos contiene los mismos datos en formato accesible."
+    };
+    Object.keys(labels).forEach(id => {
+      const el = document.getElementById(id);
+      if (el) { el.setAttribute("role", "img"); el.setAttribute("aria-label", labels[id]); }
+    });
   })();
 })();

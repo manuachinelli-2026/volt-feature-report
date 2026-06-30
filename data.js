@@ -44,14 +44,14 @@ window.VOLT_DATA = {
       note: "Columna vertebral organizativa. 68% de reach, aunque uso por usuario moderado." },
     { name: "Search",                  users: 473, totalEvents: 80523,   mean: 170.2,  median: 31.0,  p90: 448.8,   max: 4241,  verdict: "KEEP",
       note: "Alta adopción (54%) y profundidad (mediana 31). Función esperada y usada." },
-    { name: "Broadcast",               users: 98,  totalEvents: 65876,   mean: 672.2,  median: 2.5,   p90: 242.1,   max: 23556, verdict: "WATCH",
-      note: "Power-feature de nicho: 11% de reach pero volumen enorme concentrado en ~13 broadcasters. Mediana 2.5 → la media miente. No matar; monetizar." },
+    { name: "Broadcast",               users: 98,  totalEvents: 65876,   mean: 672.2,  median: 2.5,   p90: 242.1,   max: 23556, verdict: "GROW",
+      note: "98 usuarios TOCAN el broadcast pero solo ~29-34 realmente envían (reach real de envío ≈3-4%). Volumen enorme concentrado en ~13 broadcasters. Power-feature monetizable: empaquetar como premium." },
     { name: "Send Later / Scheduling", users: 544, totalEvents: 18814,   mean: 34.6,   median: 9.0,   p90: 61.0,    max: 2453,  verdict: "KEEP",
       note: "62% de reach con uso recurrente. Feature de productividad sólida." },
     { name: "MCP / Developer API",     users: 176, totalEvents: 34087,   mean: 193.7,  median: 4.0,   p90: 121.5,   max: 7975,  verdict: "GROW",
       note: "20% de reach para una función de developers/API — sorprendentemente alto. Apuesta de crecimiento." },
-    { name: "CRM / Tickets / Issues",  users: 28,  totalEvents: 16001,   mean: 571.5,  median: 31.5,  p90: 2134.7,  max: 5290,  verdict: "RECONSIDER",
-      note: "Solo 3.2% de reach. Volumen alto pero concentrado en ~14 usuarios. Sistema completo para casi nadie." },
+    { name: "CRM / Tickets / Issues",  users: 28,  totalEvents: 16001,   mean: 571.5,  median: 31.5,  p90: 2134.7,  max: 5290,  verdict: "REVIEW",
+      note: "Solo 3.2% de reach PERO mediana 31.5 — los ~14 que la usan la usan MUCHO (más profundo que Broadcast). No matar a ciegas: cruzar con revenue/tier de cuenta antes de decidir. Podría anclar tus cuentas más grandes." },
     { name: "Onboarding",              users: 475, totalEvents: 6450,    mean: 13.6,   median: 8.0,   p90: 29.0,    max: 361,   verdict: "KEEP",
       note: "Funnel necesario. 54% de reach (transitorio por naturaleza)." },
     { name: "AI Drafts & Suggestions", users: 283, totalEvents: 2521,    mean: 8.9,    median: 3.0,   p90: 18.8,    max: 239,   verdict: "IMPROVE",
@@ -76,8 +76,8 @@ window.VOLT_DATA = {
       note: "12% de reach. Funcionalidad básica de contactos/grupos." },
     { name: "Reminders",               users: 102, totalEvents: 1295,    mean: 12.7,   median: 5.0,   p90: 22.7,    max: 302,   verdict: "WATCH",
       note: "12% de reach pero mediana 5 → los que la usan vuelven. Nicho pegajoso. Posible merge con Tasks." },
-    { name: "HubSpot Integration",     users: 14,  totalEvents: 820,     mean: 58.6,   median: 35.0,  p90: 126.6,   max: 214,   verdict: "RECONSIDER",
-      note: "1.6% de reach — la integración más cara de mantener para casi nadie. ¿Solo enterprise? Revisar ROI." }
+    { name: "HubSpot Integration",     users: 14,  totalEvents: 820,     mean: 58.6,   median: 35.0,  p90: 126.6,   max: 214,   verdict: "REVIEW",
+      note: "1.6% de reach pero la MAYOR profundidad por usuario fuera del core (mediana 35). Integración enterprise típica: esos 14 podrían ser tus cuentas más caras. Decisión de matar/mantener REQUIERE datos de revenue — no se sostiene solo con uso." }
   ],
 
   /* ---------------------------------------------------------------------------
@@ -141,15 +141,17 @@ window.VOLT_DATA = {
      --------------------------------------------------------------------------- */
   recommendations: {
     kill: [
-      { name: "HubSpot Integration", metric: "1.6% reach · 14 usuarios", why: "La integración más pesada de mantener para la fracción más chica de usuarios. Evaluar si es solo un requisito enterprise puntual; si no, deprecar." },
-      { name: "CRM / Tickets / Issues", metric: "3.2% reach · 28 usuarios", why: "Un sistema entero de tickets/issues que usan ~14 personas de forma intensa. No justifica mantenimiento horizontal: o se vuelve add-on enterprise o se mata." },
-      { name: "Zoom Command", metric: "19 usuarios", why: "Casi muerto frente a Meet (99). Consolidar comandos de reunión en uno solo." },
-      { name: "Toggle Light/Dark Mode", metric: "7 usuarios", why: "Nadie cambia el tema. No invertir más; mantener default y listo." },
-      { name: "\"Memory\" feature", metric: "7 usuarios", why: "Adopción casi nula. Candidata clara a remover o repensar por completo." }
+      { name: "Comando Zoom", metric: "19 usuarios (vs 99 de Meet)", why: "Redundante y casi muerto frente a Meet. Consolidar todos los comandos de reunión en uno solo. Riesgo bajo, decisión clara." },
+      { name: "Toggle Light/Dark Mode", metric: "7 usuarios · mediana 3", why: "Casi nadie cambia el tema. No invertir más; mantener un default y listo. Remoción cosmética, sin riesgo." },
+      { name: "\"Memory\" feature", metric: "7 usuarios · mediana 1", why: "Adopción casi nula y sin profundidad. Candidata clara a remover o repensar por completo. Riesgo bajo." }
+    ],
+    review: [
+      { name: "HubSpot Integration", metric: "1.6% reach · pero mediana 35", why: "La MAYOR profundidad por usuario fuera del core. 14 usuarios que la usan intensamente — posiblemente cuentas enterprise de alto valor. NO matar sin cruzar revenue/tier de cuenta. Decisión bloqueada hasta tener ese dato." },
+      { name: "CRM / Tickets / Issues", metric: "3.2% reach · pero mediana 31.5", why: "Mismo patrón: poca reach, altísima profundidad en ~14 usuarios. Más profundo que Broadcast (que sí mantenemos). La coherencia obliga a evaluarla por valor de cuenta, no por reach." }
     ],
     improve: [
       { name: "AI Drafts & Suggestions", metric: "32% prueban · mediana 3", why: "Se prueba mucho pero no engancha. Hay producto acá: subir calidad de drafts y reducir fricción para volverla pegajosa." },
-      { name: "Monetization / Upsell", metric: "155 ven · ~34 convierten", why: "El funnel de upsell existe pero convierte poco (~22%). Optimizar mensaje, timing y pricing." },
+      { name: "Monetization / Upsell", metric: "105 ven modal · 34 convierten (~32%)", why: "El funnel de upsell existe y convierte ~32% de quienes ven el modal. Optimizar mensaje, timing y pricing para subir ese número." },
       { name: "Integrations & App Store", metric: "19% navegan, pocos conectan", why: "Se explora el App Store pero la conexión cae. Reducir fricción del connect y destacar integraciones con valor." },
       { name: "Tasks + Reminders", metric: "34% y 12% · superficiales", why: "Dos features de productividad superpuestas y poco profundas. Evaluar consolidarlas en una sola." }
     ],
@@ -157,8 +159,8 @@ window.VOLT_DATA = {
       { name: "Chat & Messaging", metric: "91.6% reach", why: "El core absoluto. Toda inversión en performance y fiabilidad acá rinde." },
       { name: "Voice & Transcription", metric: "72.6% reach · mediana 73", why: "Diferenciador con engagement profundo. Es la razón por la que muchos usan Volt." },
       { name: "Search · Lists · Command Palette · Send Later", metric: "54–68% reach", why: "Cuarteto de productividad de alta adopción. Mantener y pulir." },
-      { name: "Broadcast", metric: "11% reach · power feature", why: "Nicho pero de altísimo volumen para quien la usa. No matar: monetizar como feature premium." },
-      { name: "MCP / Developer API", metric: "20% reach y creciendo", why: "Apuesta de futuro con tracción inesperada. Invertir en developers." }
+      { name: "Broadcast", metric: "~30 envían · volumen enorme", why: "Nicho real (solo ~30 envían) pero de altísimo volumen para quien la usa. No matar: empaquetar y monetizar como feature premium." },
+      { name: "MCP / Developer API", metric: "20% reach (alto para dev API)", why: "Adopción inesperadamente alta para una función de developers. Apuesta de futuro — confirmar trayectoria con un corte temporal antes de escalar inversión." }
     ]
   }
 };
