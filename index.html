@@ -186,12 +186,13 @@
 
   <main class="wrap">
     <section class="hero" style="border-top:0">
-      <span class="eyebrow">⚡ PostHog · Volt Prd · 180 días</span>
+      <span class="eyebrow">⚡ PostHog · Volt Prd · 180 días · solo WAU</span>
       <h1>Uso de funcionalidades por <span class="u">segmento</span>.</h1>
-      <p class="lead">Cada funcionalidad de Volt dividida en <b style="color:var(--free)">Free</b>, <b style="color:var(--premium)">Premium</b> y <b style="color:var(--employee)">Employee</b>. Donde un usuario infla el promedio, lo identificamos y lo sacamos para mostrar el dato real.</p>
+      <p class="lead">Solo <b>usuarios activos (WAU)</b> — los que usaron Volt en los últimos 20 días. Cada funcionalidad dividida en <b style="color:var(--free)">Free</b>, <b style="color:var(--premium)">Premium</b> y <b style="color:var(--employee)">Employee</b>; donde un usuario infla el promedio, lo sacamos para mostrar el dato real.</p>
       <div class="period">
-        <span>Período: <b>1 ene → 30 jun 2026</b></span>
-        <span>Base activa: <b>~688 usuarios identificados</b></span>
+        <span>Período de uso: <b>1 ene → 30 jun 2026</b></span>
+        <span>Base: <b>417 usuarios activos (WAU)</b></span>
+        <span>Dormidos (&gt;20 días) excluidos</span>
       </div>
       <div class="segcards" id="segcards"></div>
     </section>
@@ -298,6 +299,7 @@
     <section id="method">
       <div class="sec-head"><div class="sec-tag">Cómo se calculó</div><h2>Metodología</h2></div>
       <div class="method">
+        <div class="card"><h4>WAU (filtro base)</h4><p>Solo usuarios con actividad en los <b>últimos 20 días</b>. Los dormidos/churned se excluyen de todo el reporte: 723 → <b>417</b> usuarios. El uso se mide igual sobre 180 días.</p></div>
         <div class="card"><h4>Segmentos</h4><p>Propiedad <code>status</code> de cada persona: <code>free</code>, <code>premium</code>, <code>employee</code>. Anónimos y churned quedan fuera.</p></div>
         <div class="card"><h4>Outlier</h4><p>Por cada funcionalidad×segmento se identifica al usuario con más usos. "Sin outlier" = promedio recalculado sin él. La mediana es el número resistente.</p></div>
         <div class="card"><h4>Privacidad</h4><p>Datos agregados. El usuario outlier se muestra anonimizado (primeros 8 caracteres del id). Sin emails ni nombres.</p></div>
