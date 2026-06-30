@@ -1,288 +1,213 @@
-/* Volt Feature Report — render layer (ECharts + vanilla JS) */
+/* Volt — segmented feature report (light theme, ECharts) */
 (function () {
-  if (!window.VOLT_DATA || !window.VOLT_DATA.meta) {
-    console.error("VOLT_DATA no cargó. Verificá que data.js cargue antes de app.js.");
-    return;
-  }
-  if (typeof window.echarts === "undefined") {
-    console.error("ECharts no disponible (CDN bloqueado?).");
-  }
+  if (!window.VOLT_DATA) { console.error("data.js no cargó"); return; }
   const D = window.VOLT_DATA;
-  const M = D.meta;
-  const ACTIVE = M.activeUsers;
-
-  // chart registry (declared first so render fns can register during init)
   const charts = [];
-  function register(c) { if (c) charts.push(c); }
-  window.addEventListener("resize", () => charts.forEach(c => c && c.resize()));
+  const reg = (c) => { if (c) charts.push(c); };
+  window.addEventListener("resize", () => charts.forEach(c => c.resize()));
 
-  // palette
-  const C = {
-    volt: "#d6ff3d", voltDim: "#a9cc2f", cyan: "#3ad6ff", violet: "#9b8cff",
-    green: "#46e08a", amber: "#ffcb45", red: "#ff5d6c", orange: "#ff944d",
-    text: "#e9ecf5", muted: "#969eb3", faint: "#646c82", line: "#262a37", grid: "#20242f"
-  };
-  const VERDICT_COLOR = {
-    CRITICAL: C.green, KEEP: C.cyan, GROW: C.violet, IMPROVE: C.amber,
-    WATCH: C.orange, CONSOLIDATE: C.orange, RECONSIDER: C.red, REVIEW: "#ff7aa2"
-  };
+  const COL = { text: "#0f172b", muted: "#5a6473", faint: "#9aa3b2", line: "#e6e8ec", grid: "#eef0f3", navy: "#0f172b" };
+  const SEG = {}; D.segments.forEach(s => SEG[s.key] = s.color);
+  const SEG_ORDER = ["Free", "Premium", "Employee"];
+  const METRIC_LABEL = { m: "Promedio", me: "Promedio sin outlier", md: "Mediana" };
 
   const fmt = (n) => {
-    if (n === null || n === undefined) return "—";
-    if (n >= 1e6) return (n / 1e6).toFixed(2).replace(/\.00$/, "") + "M";
-    if (n >= 1e3) return (n / 1e3).toFixed(n >= 1e4 ? 0 : 1).replace(/\.0$/, "") + "k";
-    return n.toLocaleString("es-AR");
+    if (n == null) return "—";
+    if (n >= 1e6) return (n / 1e6).toFixed(2).replace(/\.?0+$/, "") + "M";
+    if (n >= 1e3) return (n / 1e3).toFixed(1).replace(/\.0$/, "") + "k";
+    return (+n).toLocaleString("es-AR");
   };
-  const fmtFull = (n) => (n == null ? "—" : n.toLocaleString("es-AR"));
-  const pct = (u) => (100 * u / ACTIVE);
+  const full = (n) => n == null ? "—" : (+n).toLocaleString("es-AR");
 
-  const baseGrid = { left: 8, right: 24, top: 24, bottom: 8, containLabel: true };
-  const axisCommon = {
-    axisLine: { lineStyle: { color: C.line } },
-    axisTick: { show: false },
-    axisLabel: { color: C.muted, fontFamily: "Inter" },
-    splitLine: { lineStyle: { color: C.grid } }
+  const axis = {
+    axisLine: { lineStyle: { color: COL.line } }, axisTick: { show: false },
+    axisLabel: { color: COL.muted, fontFamily: "Inter", fontSize: 12 },
+    splitLine: { lineStyle: { color: COL.grid } }
   };
-  const tooltipStyle = {
-    backgroundColor: "#14161f", borderColor: "#333848", borderWidth: 1,
-    textStyle: { color: C.text, fontFamily: "Inter", fontSize: 13 },
-    extraCssText: "border-radius:10px;padding:12px 14px;box-shadow:0 10px 30px rgba(0,0,0,.5)"
+  const tip = {
+    backgroundColor: "#ffffff", borderColor: "#e6e8ec", borderWidth: 1,
+    textStyle: { color: COL.text, fontFamily: "Inter", fontSize: 13 },
+    extraCssText: "border-radius:10px;padding:11px 13px;box-shadow:0 8px 28px rgba(15,23,43,.12)"
   };
 
-  /* ---------- KPIs ---------- */
-  (function renderKPIs() {
-    const items = [
-      { v: fmt(M.totalEvents), l: "Eventos analizados", s: "180 días · Volt Prd" },
-      { v: fmtFull(ACTIVE), l: "Usuarios activos de producto", s: `de ${fmtFull(M.allUsers)} sesiones totales` },
-      { v: D.groups.filter(g => !g.infra).length, l: "Áreas de features", s: "agrupando ~250 eventos" },
-      { v: "21×", l: "Brecha media ÷ mediana", s: "ej. Chat Open: 3.338 vs 157" }
-    ];
-    document.getElementById("kpis").innerHTML = items.map(k =>
-      `<div class="kpi"><div class="v">${k.v}</div><div class="l">${k.l}</div><div class="s">${k.s}</div></div>`
-    ).join("");
-  })();
+  /* ---- segment KPI cards ---- */
+  document.getElementById("segcards").innerHTML = D.segments.map(s => `
+    <div class="segcard ${s.key}">
+      <div class="tag">${s.label}</div>
+      <div class="users">${full(s.users)}</div>
+      <div class="row"><span>Eventos</span><b>${fmt(s.events)}</b></div>
+      <div class="row"><span>Eventos / usuario</span><b>${full(s.perUser)}</b></div>
+    </div>`).join("");
 
-  /* ---------- Outlier chart: mean vs trimmed vs median ---------- */
-  (function renderOutlier() {
-    const feats = D.features
-      .filter(f => f.trimmedMean != null)
-      .sort((a, b) => b.mean - a.mean)
-      .slice(0, 9)
-      .reverse();
-    const names = feats.map(f => f.name);
-    const chart = echarts.init(document.getElementById("chart-outlier"), null, { renderer: "canvas" });
-    chart.setOption({
-      grid: { ...baseGrid, left: 8, right: 40 },
+  /* ---- segment legend (shared) ---- */
+  const segLegendHTML = SEG_ORDER.map(k => `<span><i style="background:${SEG[k]}"></i>${k}</span>`).join("");
+  document.getElementById("sc-legend").innerHTML = segLegendHTML;
+  document.getElementById("grp-legend").innerHTML = segLegendHTML;
+
+  /* ---- chart: segment weight (events + per user) ---- */
+  (function () {
+    const segs = D.segments;
+    const c = echarts.init(document.getElementById("chart-seg"));
+    c.setOption({
+      grid: { left: 8, right: 80, top: 10, bottom: 24, containLabel: true },
       tooltip: {
-        trigger: "axis", axisPointer: { type: "shadow" }, ...tooltipStyle,
-        formatter: (ps) => {
-          const f = feats[ps[0].dataIndex];
-          return `<b>${f.name}</b><br/>` +
-            `Media (con outliers): <b>${fmtFull(f.mean)}</b><br/>` +
-            `Media recortada (sin top 5%): <b>${fmtFull(f.trimmedMean)}</b><br/>` +
-            `<span style="color:${C.volt}">Mediana (real): <b>${fmtFull(f.median)}</b></span><br/>` +
-            `<span style="color:${C.faint}">${f.pctFromOutliers}% de eventos vienen del top 5%</span>`;
-        }
+        ...tip, trigger: "axis", axisPointer: { type: "shadow" },
+        formatter: (p) => { const s = segs[p[0].dataIndex]; return `<b>${s.label}</b><br/>Usuarios: <b>${full(s.users)}</b><br/>Eventos: <b>${full(s.events)}</b><br/>Eventos/usuario: <b>${full(s.perUser)}</b>`; }
       },
-      legend: { show: false },
-      xAxis: { type: "value", ...axisCommon, name: "usos por usuario", nameTextStyle: { color: C.faint }, nameLocation: "end", nameGap: 8 },
-      yAxis: { type: "category", data: names, ...axisCommon, axisLabel: { color: C.text, fontFamily: "Inter", fontSize: 12.5 } },
-      series: [
-        { name: "Media", type: "bar", data: feats.map(f => f.mean), itemStyle: { color: "#3a3f52", borderRadius: [0, 4, 4, 0] }, barGap: "-100%", z: 1, barWidth: "62%" },
-        { name: "Media recortada", type: "bar", data: feats.map(f => f.trimmedMean), itemStyle: { color: C.cyan, borderRadius: [0, 4, 4, 0] }, z: 2, barWidth: "62%" },
-        { name: "Mediana", type: "bar", data: feats.map(f => f.median), itemStyle: { color: C.volt, borderRadius: [0, 4, 4, 0] }, z: 3, barWidth: "62%",
-          label: { show: true, position: "right", color: C.volt, fontWeight: 700, fontFamily: "Space Grotesk", formatter: (p) => fmtFull(p.value) } }
-      ]
-    });
-    register(chart);
-  })();
-
-  /* ---------- Top features (toggle reach / volume) ---------- */
-  let topChart;
-  function renderTop(mode) {
-    const key = mode === "users" ? "users" : "total";
-    const feats = [...D.features].sort((a, b) => b[key] - a[key]).slice(0, 16).reverse();
-    const names = feats.map(f => f.name);
-    const data = feats.map(f => ({
-      value: f[key],
-      itemStyle: { color: VERDICT_COLOR[(D.groups.find(g => g.name === f.group) || {}).verdict] || C.cyan, borderRadius: [0, 4, 4, 0] }
-    }));
-    if (!topChart) topChart = echarts.init(document.getElementById("chart-top"));
-    topChart.setOption({
-      grid: { ...baseGrid, left: 8, right: 70 },
-      tooltip: {
-        trigger: "axis", axisPointer: { type: "shadow" }, ...tooltipStyle,
-        formatter: (ps) => {
-          const f = feats[ps[0].dataIndex];
-          return `<b>${f.name}</b> <span style="color:${C.faint}">· ${f.group}</span><br/>` +
-            `Usuarios distintos: <b>${fmtFull(f.users)}</b> (${pct(f.users).toFixed(1)}%)<br/>` +
-            `Eventos totales: <b>${fmtFull(f.total)}</b><br/>` +
-            `<span style="color:${C.volt}">Mediana/usuario: <b>${fmtFull(f.median)}</b></span>`;
-        }
-      },
-      xAxis: { type: mode === "users" ? "value" : "log", ...axisCommon, min: mode === "users" ? 0 : 10 },
-      yAxis: { type: "category", data: names, ...axisCommon, axisLabel: { color: C.text, fontSize: 12 } },
+      xAxis: { type: "log", ...axis, name: "eventos (log)", nameTextStyle: { color: COL.faint }, nameLocation: "end" },
+      yAxis: { type: "category", data: segs.map(s => s.label), ...axis, axisLabel: { color: COL.text, fontWeight: 600, fontSize: 13 } },
       series: [{
-        type: "bar", data, barWidth: "64%",
-        label: {
-          show: true, position: "right", color: C.muted, fontFamily: "Space Grotesk", fontSize: 11.5,
-          formatter: (p) => mode === "users" ? `${pct(p.value).toFixed(0)}%` : fmt(p.value)
-        }
+        type: "bar", data: segs.map(s => ({ value: s.events, itemStyle: { color: s.color, borderRadius: [0, 5, 5, 0] } })), barWidth: "52%",
+        label: { show: true, position: "right", color: COL.muted, fontWeight: 600, formatter: (p) => `${fmt(p.value)} · ${full(segs[p.dataIndex].perUser)}/u` }
+      }]
+    });
+    reg(c);
+  })();
+
+  /* ---- chart: shortcuts per segment (toggle metric) ---- */
+  let scChart, scMetric = "m";
+  function drawShortcuts() {
+    const rows = SEG_ORDER.map(k => D.shortcuts.find(s => s.seg === k)).filter(Boolean);
+    if (!scChart) scChart = echarts.init(document.getElementById("chart-shortcuts"));
+    scChart.setOption({
+      grid: { left: 8, right: 70, top: 10, bottom: 30, containLabel: true },
+      tooltip: {
+        ...tip, trigger: "axis", axisPointer: { type: "shadow" },
+        formatter: (p) => { const r = rows[p[0].dataIndex]; return `<b>${r.seg}</b> · shortcuts/usuario<br/>Promedio: <b>${full(r.m)}</b><br/>Sin outlier: <b>${full(r.me)}</b><br/>Mediana: <b>${full(r.md)}</b><br/><span style="color:${COL.faint}">${r.u} usuarios · adopción ${r.adopt}% · 1 usuario = ${r.tp}%</span>`; }
+      },
+      xAxis: { type: "value", ...axis, name: METRIC_LABEL[scMetric] + " (atajos/usuario)", nameTextStyle: { color: COL.faint }, nameLocation: "middle", nameGap: 28 },
+      yAxis: { type: "category", data: rows.map(r => r.seg), ...axis, axisLabel: { color: COL.text, fontWeight: 600, fontSize: 13 } },
+      series: [{
+        type: "bar", barWidth: "52%",
+        data: rows.map(r => ({ value: r[scMetric], itemStyle: { color: SEG[r.seg], borderRadius: [0, 5, 5, 0] } })),
+        label: { show: true, position: "right", color: COL.text, fontWeight: 700, formatter: (p) => full(p.value) }
       }]
     });
   }
-  (function initTop() {
-    renderTop("users");
-    register(topChart);
-    const tbtns = document.querySelectorAll("#top-toggle button");
-    tbtns.forEach(btn => {
-      btn.setAttribute("aria-pressed", btn.classList.contains("on") ? "true" : "false");
-      btn.addEventListener("click", () => {
-        tbtns.forEach(b => { b.classList.remove("on"); b.setAttribute("aria-pressed", "false"); });
-        btn.classList.add("on");
-        btn.setAttribute("aria-pressed", "true");
-        renderTop(btn.dataset.mode);
-      });
-    });
+  drawShortcuts(); reg(scChart);
+  bindToggle("sc-toggle", (m) => { scMetric = m; drawShortcuts(); });
+  (function () {
+    const emp = D.shortcuts.find(s => s.seg === "Employee");
+    document.getElementById("sc-note").innerHTML =
+      `Premium domina los atajos en absoluto (promedio ${full(D.shortcuts.find(s=>s.seg==='Premium').m)}/usuario). En Employee, el usuario <code style="background:#f3f5f7;padding:1px 5px;border-radius:4px">${emp.tu}</code> concentra el ${emp.tp}% — sin él, el promedio baja de ${full(emp.m)} a <b>${full(emp.me)}</b>.`;
   })();
 
-  /* ---------- Groups table (sortable) ---------- */
-  (function renderTable() {
-    const tbody = document.querySelector("#groups-table tbody");
-    const rows = D.groups.map(g => ({ ...g, adoption: pct(g.users) }));
-    let sortKey = "totalEvents", sortDir = -1;
-    const maxAdopt = Math.max(...rows.map(r => r.adoption));
+  /* ---- chart: groups × segment (toggle metric) ---- */
+  let grpChart, grpMetric = "m";
+  function drawGroups() {
+    const groups = [...D.groups].sort((a, b) => totalOf(b) - totalOf(a));
+    const names = groups.map(g => g.name).reverse();
+    const gg = [...groups].reverse();
+    if (!grpChart) grpChart = echarts.init(document.getElementById("chart-groups"));
+    grpChart.setOption({
+      grid: { left: 8, right: 30, top: 10, bottom: 34, containLabel: true },
+      legend: { show: false },
+      tooltip: {
+        ...tip, trigger: "axis", axisPointer: { type: "shadow" },
+        formatter: (ps) => {
+          const g = gg[ps[0].dataIndex];
+          let h = `<b>${g.name}</b><br/>`;
+          SEG_ORDER.forEach(k => { const s = g.seg[k]; if (s) h += `<span style="color:${SEG[k]}">●</span> ${k}: <b>${full(s[grpMetric])}</b> <span style="color:${COL.faint}">(${s.u} u · med ${full(s.md)})</span><br/>`; });
+          return h;
+        }
+      },
+      xAxis: { type: "log", min: 1, ...axis, name: METRIC_LABEL[grpMetric] + " de usos/usuario (log)", nameTextStyle: { color: COL.faint }, nameLocation: "middle", nameGap: 30 },
+      yAxis: { type: "category", data: names, ...axis, axisLabel: { color: COL.text, fontSize: 11.5 } },
+      series: SEG_ORDER.map(k => ({
+        name: k, type: "bar", barGap: "10%", barCategoryGap: "32%",
+        itemStyle: { color: SEG[k], borderRadius: [0, 3, 3, 0] },
+        data: gg.map(g => { const v = g.seg[k] ? g.seg[k][grpMetric] : 0; return v > 0 ? v : 0.0001; })
+      }))
+    });
+  }
+  function totalOf(g) { return SEG_ORDER.reduce((a, k) => a + (g.seg[k] ? g.seg[k].t : 0), 0); }
+  drawGroups(); reg(grpChart);
+  bindToggle("grp-toggle", (m) => { grpMetric = m; drawGroups(); });
 
+  /* ---- table ---- */
+  (function () {
+    const thead = document.querySelector("#tbl thead");
+    const tbody = document.querySelector("#tbl tbody");
+    const cols = [
+      { k: "name", t: "Funcionalidad", grp: true },
+      { k: "Free_u", t: "Free · u" }, { k: "Free_m", t: "Free · prom" }, { k: "Free_md", t: "Free · med" },
+      { k: "Premium_u", t: "Prem · u" }, { k: "Premium_m", t: "Prem · prom" }, { k: "Premium_md", t: "Prem · med" },
+      { k: "Employee_u", t: "Emp · u" }, { k: "Employee_m", t: "Emp · prom" }, { k: "Employee_md", t: "Emp · med" },
+      { k: "flag", t: "" }
+    ];
+    const rows = D.groups.map(g => {
+      const maxTp = Math.max(...SEG_ORDER.map(k => g.seg[k] ? g.seg[k].tp : 0));
+      const r = { name: g.name, _total: totalOf(g), _maxTp: maxTp };
+      SEG_ORDER.forEach(k => { const s = g.seg[k] || {}; r[k + "_u"] = s.u || 0; r[k + "_m"] = s.m || 0; r[k + "_md"] = s.md || 0; });
+      return r;
+    });
+    thead.innerHTML = "<tr>" + cols.map(c => `<th class="${c.grp ? "grp" : ""}" data-k="${c.k}">${c.t}</th>`).join("") + "</tr>";
+    let sk = "_total", sd = -1;
+    function seg_dot(k) { return `<span class="seg-dot" style="background:${SEG[k]}"></span>`; }
     function draw() {
-      const sorted = [...rows].sort((a, b) => {
-        const av = a[sortKey], bv = b[sortKey];
-        if (typeof av === "string") return sortDir * av.localeCompare(bv);
-        return sortDir * (av - bv);
-      });
-      tbody.innerHTML = sorted.map(r => {
-        const w = Math.max(4, (r.adoption / maxAdopt) * 100);
-        return `<tr>
-          <td><span class="fname">${r.name}</span>${r.infra ? ' <span style="color:var(--faint);font-size:11px">· infra</span>' : ''}</td>
-          <td class="num"><div class="bar-cell"><div class="bar-track"><div class="bar-fill" style="width:${w}%"></div></div><span class="bar-num">${r.adoption.toFixed(1)}%</span></div></td>
-          <td class="num">${fmtFull(r.users)}</td>
-          <td class="num">${fmt(r.totalEvents)}</td>
-          <td class="num" style="color:var(--volt);font-weight:600">${fmtFull(r.median)}</td>
-          <td class="num" style="color:var(--muted)">${fmtFull(r.mean)}</td>
-          <td><span class="badge b-${r.verdict}">${r.verdict}</span></td>
-        </tr>`;
-      }).join("");
+      const sorted = [...rows].sort((a, b) => typeof a[sk] === "string" ? sd * a[sk].localeCompare(b[sk]) : sd * (a[sk] - b[sk]));
+      tbody.innerHTML = sorted.map(r => `<tr>
+        <td>${r.name}</td>
+        <td class="mono">${full(r.Free_u)}</td><td class="mono">${full(r.Free_m)}</td><td class="mono" style="color:${COL.muted}">${full(r.Free_md)}</td>
+        <td class="mono">${full(r.Premium_u)}</td><td class="mono">${full(r.Premium_m)}</td><td class="mono" style="color:${COL.muted}">${full(r.Premium_md)}</td>
+        <td class="mono">${full(r.Employee_u)}</td><td class="mono">${full(r.Employee_m)}</td><td class="mono" style="color:${COL.muted}">${full(r.Employee_md)}</td>
+        <td>${r._maxTp >= 30 ? '<span class="flag">outlier</span>' : ""}</td>
+      </tr>`).join("");
     }
-    const ths = document.querySelectorAll("#groups-table thead th");
-    function applySort(th) {
-      const k = th.dataset.k;
-      if (k === sortKey) sortDir *= -1;
-      else { sortKey = k; sortDir = (k === "name" || k === "verdict") ? 1 : -1; }
-      ths.forEach(t => t.setAttribute("aria-sort", "none"));
-      th.setAttribute("aria-sort", sortDir === 1 ? "ascending" : "descending");
-      draw();
-    }
-    ths.forEach(th => {
-      th.setAttribute("tabindex", "0");
-      th.setAttribute("role", "columnheader");
-      th.setAttribute("aria-sort", "none");
-      th.addEventListener("click", () => applySort(th));
-      th.addEventListener("keydown", (e) => {
-        if (e.key === "Enter" || e.key === " ") { e.preventDefault(); applySort(th); }
-      });
+    thead.querySelectorAll("th").forEach(th => {
+      th.setAttribute("tabindex", "0"); th.setAttribute("aria-sort", "none");
+      const go = () => { const k = th.dataset.k; if (k === "flag") return; if (k === sk) sd *= -1; else { sk = k; sd = k === "name" ? 1 : -1; } thead.querySelectorAll("th").forEach(t => t.setAttribute("aria-sort", "none")); th.setAttribute("aria-sort", sd === 1 ? "ascending" : "descending"); draw(); };
+      th.addEventListener("click", go);
+      th.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); go(); } });
     });
     draw();
   })();
 
-  /* ---------- Decision map (scatter quadrant) ---------- */
-  (function renderMap() {
-    const groups = D.groups.filter(g => !g.infra);
-    const maxEv = Math.max(...groups.map(g => g.totalEvents));
-    const data = groups.map(g => ({
-      name: g.name,
-      value: [pct(g.users), Math.max(1, g.median), g.totalEvents],
-      symbolSize: 16 + 52 * Math.sqrt(g.totalEvents / maxEv),
-      itemStyle: {
-        color: VERDICT_COLOR[g.verdict] + "cc",
-        borderColor: VERDICT_COLOR[g.verdict], borderWidth: 1.5,
-        shadowBlur: 12, shadowColor: VERDICT_COLOR[g.verdict] + "55"
-      }
+  /* ---- outlier cards ---- */
+  (function () {
+    const items = [];
+    D.groups.forEach(g => SEG_ORDER.forEach(k => {
+      const s = g.seg[k];
+      if (s && s.tp >= 30 && s.t >= 200) items.push({ name: g.name, seg: k, m: s.m, me: s.me, md: s.md, tp: s.tp, tu: s.tu, t: s.t, impact: s.tp / 100 * s.t });
     }));
-    const chart = echarts.init(document.getElementById("chart-map"));
-    chart.setOption({
-      grid: { ...baseGrid, left: 8, right: 30, top: 30, bottom: 40 },
-      tooltip: {
-        ...tooltipStyle,
-        formatter: (p) => {
-          const g = groups[p.dataIndex];
-          return `<b>${g.name}</b> <span class="badge b-${g.verdict}" style="margin-left:4px">${g.verdict}</span><br/>` +
-            `Alcance: <b>${pct(g.users).toFixed(1)}%</b> (${fmtFull(g.users)} usuarios)<br/>` +
-            `Mediana/usuario: <b style="color:${C.volt}">${fmtFull(g.median)}</b> · Eventos: <b>${fmt(g.totalEvents)}</b><br/>` +
-            `<span style="color:${C.muted};font-size:12px;display:block;max-width:260px;margin-top:6px">${g.note}</span>`;
-        }
-      },
-      xAxis: {
-        type: "value", name: "Alcance  →  (% de usuarios activos)", nameLocation: "middle", nameGap: 30,
-        nameTextStyle: { color: C.faint, fontSize: 12 }, min: 0, max: 100, ...axisCommon,
-        axisLabel: { color: C.muted, formatter: "{value}%" }
-      },
-      yAxis: {
-        type: "log", name: "Profundidad  →  (mediana usos/usuario)", nameLocation: "middle", nameGap: 38,
-        nameTextStyle: { color: C.faint, fontSize: 12 }, min: 1, max: 200, ...axisCommon
-      },
-      series: [{
-        type: "scatter", data,
-        label: {
-          show: true, position: "right", color: C.text, fontSize: 11, fontFamily: "Inter",
-          formatter: (p) => groups[p.dataIndex].name, distance: 6
-        },
-        labelLayout: { hideOverlap: true, moveOverlap: "shiftY" },
-        emphasis: { focus: "self", label: { show: true } },
-        markArea: {
-          silent: true, itemStyle: { color: "rgba(255,93,108,.05)" },
-          data: [[{ xAxis: 0, yAxis: 1 }, { xAxis: 25, yAxis: 6 }]]
-        }
-      }]
-    });
-    register(chart);
-
-    // legend
-    const seen = [];
-    document.getElementById("map-legend").innerHTML = groups
-      .map(g => g.verdict).filter(v => (seen.includes(v) ? false : seen.push(v)))
-      .map(v => `<span><i style="background:${VERDICT_COLOR[v]}"></i> ${v}</span>`).join("") +
-      `<span style="color:var(--faint)">· tamaño de burbuja = volumen de eventos · zona roja = candidatas a matar</span>`;
-  })();
-
-  /* ---------- Recommendations ---------- */
-  (function renderRecs() {
-    const cols = [
-      { key: "kill", cls: "kill", title: "🔴 Matar (seguro)", items: D.recommendations.kill },
-      { key: "review", cls: "review", title: "🩷 Revisar con revenue", items: D.recommendations.review },
-      { key: "improve", cls: "improve", title: "🟡 Mejorar / vigilar", items: D.recommendations.improve },
-      { key: "keep", cls: "keep", title: "🟢 Mantener / invertir", items: D.recommendations.keep }
-    ].filter(c => Array.isArray(c.items) && c.items.length);
-    document.getElementById("recs").innerHTML = cols.map(c => `
-      <div class="rec-col ${c.cls}">
-        <h3>${c.title}</h3>
-        ${c.items.map(it => `
-          <div class="rec-item">
-            <div class="rt">${it.name}</div>
-            <div class="rm">${it.metric}</div>
-            <div class="rw">${it.why}</div>
-          </div>`).join("")}
+    D.shortcuts.forEach(s => { if (s.tp >= 30) items.push({ name: "Shortcuts", seg: s.seg, m: s.m, me: s.me, md: s.md, tp: s.tp, tu: s.tu, t: s.t, impact: s.tp / 100 * s.t }); });
+    items.sort((a, b) => b.impact - a.impact);
+    document.getElementById("outliers").innerHTML = items.slice(0, 6).map(o => `
+      <div class="out-card" style="border-left-color:${SEG[o.seg]}">
+        <div class="h">${o.name}</div>
+        <div class="seg" style="color:${SEG[o.seg]}">${o.seg}</div>
+        <div class="nums">
+          <div><div class="lbl">Promedio crudo</div><div class="val">${full(o.m)}</div></div>
+          <div class="real"><div class="lbl">Real (sin outlier)</div><div class="val">${full(o.me)}</div></div>
+        </div>
+        <div class="who">1 usuario <code>${o.tu}</code> concentra el <b>${o.tp}%</b> del uso${o.md != null ? ` · mediana ${full(o.md)}` : ""}.</div>
       </div>`).join("");
   })();
 
-  /* ---------- accessibility: chart text alternatives ---------- */
-  (function chartA11y() {
-    const labels = {
-      "chart-outlier": "Gráfico de barras horizontales comparando media, media recortada y mediana de usos por usuario en las features más usadas; muestra cómo los outliers inflan la media. Los datos exactos están en la tabla de grupos más abajo.",
-      "chart-top": "Gráfico de barras de las features más usadas, alternable entre alcance (usuarios) y volumen (eventos). Datos en la tabla de grupos.",
-      "chart-map": "Mapa de dispersión de decisión: eje X alcance (% de usuarios), eje Y profundidad (mediana de usos por usuario), tamaño de burbuja según volumen de eventos. La tabla de grupos contiene los mismos datos en formato accesible."
-    };
-    Object.keys(labels).forEach(id => {
-      const el = document.getElementById(id);
-      if (el) { el.setAttribute("role", "img"); el.setAttribute("aria-label", labels[id]); }
+  /* ---- meet/zoom chart ---- */
+  (function () {
+    const mz = D.meetZoom;
+    const c = echarts.init(document.getElementById("chart-meetzoom"));
+    c.setOption({
+      grid: { left: 8, right: 60, top: 10, bottom: 24, containLabel: true },
+      tooltip: { ...tip, trigger: "axis", axisPointer: { type: "shadow" }, formatter: (p) => { const r = mz[p[0].dataIndex]; return `<b>${r.cmd}</b><br/>Usuarios: <b>${r.u}</b><br/>Promedio: <b>${full(r.m)}</b> · Mediana: <b>${full(r.md)}</b><br/><span style="color:${COL.faint}">top usuario solo ${r.tp}% — sin outlier real</span>`; } },
+      xAxis: { type: "value", ...axis, name: "promedio usos/usuario", nameTextStyle: { color: COL.faint }, nameLocation: "middle", nameGap: 26 },
+      yAxis: { type: "category", data: mz.map(r => r.cmd), ...axis, axisLabel: { color: COL.text, fontSize: 12 } },
+      series: [{ type: "bar", barWidth: "48%", data: mz.map(r => r.m), itemStyle: { color: "#94a3b8", borderRadius: [0, 5, 5, 0] }, label: { show: true, position: "right", color: COL.muted, fontWeight: 600, formatter: (p) => `${full(mz[p.dataIndex].u)} users` } }]
     });
+    reg(c);
   })();
+
+  /* ---- helpers ---- */
+  function bindToggle(id, cb) {
+    const btns = document.querySelectorAll("#" + id + " button");
+    btns.forEach(b => {
+      b.setAttribute("aria-pressed", b.classList.contains("on") ? "true" : "false");
+      b.addEventListener("click", () => {
+        btns.forEach(x => { x.classList.remove("on"); x.setAttribute("aria-pressed", "false"); });
+        b.classList.add("on"); b.setAttribute("aria-pressed", "true");
+        cb(b.dataset.m);
+      });
+    });
+  }
 })();

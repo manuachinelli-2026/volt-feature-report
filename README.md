@@ -1,35 +1,27 @@
-# Volt · Reporte de Uso de Features
+# Volt · Revisión de funcionalidades por segmento
 
-Reporte interactivo del uso real de las funcionalidades de **Volt**, construido a partir de los datos de **PostHog** (proyecto `Volt Prd`, producción).
+Reporte interactivo del uso de cada funcionalidad de **Volt**, dividido en **Free / Premium / Employee**, construido con datos de **PostHog** (`Volt Prd`).
 
 🔗 **Deploy:** ver el link de Vercel.
 
-## Qué responde
+## Qué muestra
 
-1. **Todas las funcionalidades** instrumentadas en PostHog, agrupadas en ~22 áreas de producto.
-2. **Las más usadas** — por alcance (usuarios distintos) y por volumen (eventos).
-3. **Promedio de uso por usuario** de cada feature.
-4. **Outliers** — power-users que inflan la métrica: se aíslan estadísticamente (corte P95 / mediana) para llegar al número *real*.
-5. **Qué matar y qué mantener** — recomendaciones según alcance + profundidad + costo de mantenimiento.
+- **Peso de cada segmento** — usuarios, eventos y eventos/usuario (Free / Premium / Employee).
+- **Shortcuts** — el modo de interacción dominante; promedio de atajos por usuario en cada segmento.
+- **Todas las funcionalidades por segmento** — promedio de usos/usuario, con toggle Promedio / Sin outlier / Mediana.
+- **Outliers** — funcionalidades donde un único usuario infla el promedio: se identifica (anonimizado) y se recalcula el número real sin él.
+- **/meet y /zoom** — caso de uso bajo sin outlier.
 
 ## Datos
 
-- **Ventana:** 180 días (1 ene – 30 jun 2026)
-- **Volumen:** 5,64M eventos · 2.929 personas · 872 usuarios activos de producto
-- **Privacidad:** solo datos **agregados y anónimos** (sin emails ni identidades).
-- **Snapshot estático:** la foto está embebida en [`data.js`](./data.js). Para regenerar, correr de nuevo las queries HogQL contra PostHog y actualizar ese archivo.
+- **Segmentación:** propiedad `status` de cada persona → `free` / `premium` / `employee`. Anónimos y churned quedan fuera.
+- **Ventana:** 180 días (1 ene – 30 jun 2026). Base activa ~688 usuarios identificados.
+- **Outlier:** por cada funcionalidad×segmento se aísla al usuario más pesado; "sin outlier" = promedio recalculado sin él; la mediana es el número resistente.
+- **Privacidad:** datos agregados; el usuario outlier se muestra anonimizado (8 chars). Sin emails ni nombres.
 
 ## Stack
 
-Sitio estático puro — `index.html` + `data.js` + `app.js` + [ECharts](https://echarts.apache.org/). Sin build. Deploy directo en Vercel.
-
-## Estructura
-
-```
-index.html   # estructura + estilos
-data.js       # snapshot de datos (auditable)
-app.js        # render: KPIs, gráficos, tabla ordenable, mapa de decisión
-```
+Sitio estático — `index.html` + `data.js` + `app.js` + [ECharts](https://echarts.apache.org/). Estética basada en voltchat.com (claro, verde #a0ff79, Inter). Deploy directo en Vercel.
 
 ---
-Generado el 30 jun 2026.
+Snapshot 30 jun 2026.

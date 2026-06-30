@@ -1,166 +1,142 @@
 /* =============================================================================
-   Volt — Feature Usage Report · DATA SNAPSHOT
+   Volt — Revisión de funcionalidades por segmento · DATA SNAPSHOT
    -----------------------------------------------------------------------------
-   Source:   PostHog · project "Volt Prd" (id 347977) · org "Volt"
-   Window:   180 days · 2026-01-01 → 2026-06-30
-   Captured: 2026-06-30
-   Method:   Aggregations run via HogQL over the `events` table.
-             All figures are AGGREGATE and ANONYMOUS (no user identities).
+   Fuente:   PostHog · "Volt Prd" (347977) · 180 días (2026-01-01 → 2026-06-30)
+   Segmento: person.properties.status  →  Free / Premium / Employee
+   Outlier:  por cada feature×segmento guardamos la media, la mediana, la media
+             SIN el usuario más pesado (me) y quién es ese usuario (tu, % = tp).
+   Privado:  datos agregados; el usuario outlier se muestra anonimizado (8 chars).
    ============================================================================= */
 
 window.VOLT_DATA = {
   meta: {
-    project: "Volt Prd",
     windowDays: 180,
     periodStart: "2026-01-01",
     periodEnd: "2026-06-30",
     generatedAt: "2026-06-30",
-    totalEvents: 5636104,
-    allUsers: 2929,        // every person_id seen (incl. anonymous / one-touch)
-    activeUsers: 872,      // engaged product base (did Chat Open / Opened App / identify / User Created)
-    // Overall per-user concentration (across ALL 2929 users)
-    meanEventsPerUser: 1924,
-    medianEventsPerUser: 2,
-    p90EventsPerUser: 2521,
-    p99EventsPerUser: 48016,
-    maxEventsPerUser: 102175
+    totalEvents: 4855363,           // eventos de usuarios identificados (Free+Premium+Employee)
+    activeIdentified: 688            // base activa según dashboard de Volt (~626 en eventos)
   },
 
-  /* ---------------------------------------------------------------------------
-     FEATURE GROUPS — ~250 raw events rolled up into logical product areas.
-     `users` = distinct users that touched the group (real reach).
-     Adoption % is computed in app.js as users / activeUsers (872).
-     verdict ∈ CRITICAL | KEEP | GROW | IMPROVE | WATCH | CONSOLIDATE | RECONSIDER
-     `infra:true` => excluded from kill/keep scoring (background/telemetry/identity).
-     --------------------------------------------------------------------------- */
+  // Tamaño y peso de cada segmento (usuarios identificados, 180d)
+  segments: [
+    { key: "Free",     label: "Free",     users: 537, events: 1342899, perUser: 2501,  color: "#3a9e1e" },
+    { key: "Premium",  label: "Premium",  users: 162, events: 3228348, perUser: 19928, color: "#b060ff" },
+    { key: "Employee", label: "Employee", users: 24,  events: 284116,  perUser: 11838, color: "#f59e0b" }
+  ],
+
+  // Modo de interacción (global) — Shortcuts es el modo dominante
+  interaction: [
+    { mode: "Shortcut",      events: 340291, users: 481 },
+    { mode: "Botón",         events: 175712, users: 556 },
+    { mode: "Slash command", events: 852,    users: 108 },
+    { mode: "Click",         events: 241,    users: 77 },
+    { mode: "Teclado",       events: 20,     users: 13 }
+  ],
+
+  // SHORTCUTS por segmento (lo que más se usa)
+  // u=usuarios, t=total, m=media, md=mediana, mx=tope 1 usuario, me=media sin outlier,
+  // tp=% del tope, tu=usuario tope, adopt=% del segmento que usa shortcuts, share=% de sus interacciones que son shortcut
+  shortcuts: [
+    { seg: "Premium",  u: 140, t: 227658, m: 1626.1, md: 565.0, mx: 12159, me: 1550.4, tp: 5.3,  tu: "02198bb3", adopt: 86, share: 66.3 },
+    { seg: "Employee", u: 18,  t: 21819,  m: 1212.2, md: 245.5, mx: 8299,  me: 795.3,  tp: 38.0, tu: "a0c28a6f", adopt: 75, share: 81.8 },
+    { seg: "Free",     u: 344, t: 75991,  m: 220.9,  md: 35.0,  mx: 4732,  me: 207.8,  tp: 6.2,  tu: "c1dab004", adopt: 64, share: 58.5 }
+  ],
+
+  // GRUPOS DE FEATURES × SEGMENTO  (ordenados por volumen total)
+  // cada seg: { u:usuarios, t:total, m:media, md:mediana, mx:tope1, me:media_sin_outlier, tp:%tope, tu:usuario_tope }
   groups: [
-    { name: "Chat & Messaging",        users: 799, totalEvents: 2908217, mean: 3639.8, median: 177.0, p90: 11278.6, max: 66545, verdict: "CRITICAL",
-      note: "El corazón del producto. 9 de cada 10 usuarios activos. Intocable." },
-    { name: "Voice & Transcription",   users: 633, totalEvents: 419684,  mean: 663.0,  median: 73.0,  p90: 2017.8,  max: 12017, verdict: "CRITICAL",
-      note: "Diferenciador clave: 73% de reach y engagement profundo (mediana 73/usuario). Núcleo de Volt." },
-    { name: "Command Palette & Nav",   users: 533, totalEvents: 166528,  mean: 312.4,  median: 14.0,  p90: 968.6,   max: 7838,  verdict: "KEEP",
-      note: "Navegación de power-users. 61% de reach; mediana 14 → uso recurrente real." },
-    { name: "Lists & Organization",    users: 593, totalEvents: 87645,   mean: 147.8,  median: 4.0,   p90: 49.0,    max: 9944,  verdict: "KEEP",
-      note: "Columna vertebral organizativa. 68% de reach, aunque uso por usuario moderado." },
-    { name: "Search",                  users: 473, totalEvents: 80523,   mean: 170.2,  median: 31.0,  p90: 448.8,   max: 4241,  verdict: "KEEP",
-      note: "Alta adopción (54%) y profundidad (mediana 31). Función esperada y usada." },
-    { name: "Broadcast",               users: 98,  totalEvents: 65876,   mean: 672.2,  median: 2.5,   p90: 242.1,   max: 23556, verdict: "GROW",
-      note: "98 usuarios TOCAN el broadcast pero solo ~29-34 realmente envían (reach real de envío ≈3-4%). Volumen enorme concentrado en ~13 broadcasters. Power-feature monetizable: empaquetar como premium." },
-    { name: "Send Later / Scheduling", users: 544, totalEvents: 18814,   mean: 34.6,   median: 9.0,   p90: 61.0,    max: 2453,  verdict: "KEEP",
-      note: "62% de reach con uso recurrente. Feature de productividad sólida." },
-    { name: "MCP / Developer API",     users: 176, totalEvents: 34087,   mean: 193.7,  median: 4.0,   p90: 121.5,   max: 7975,  verdict: "GROW",
-      note: "20% de reach para una función de developers/API — sorprendentemente alto. Apuesta de crecimiento." },
-    { name: "CRM / Tickets / Issues",  users: 28,  totalEvents: 16001,   mean: 571.5,  median: 31.5,  p90: 2134.7,  max: 5290,  verdict: "REVIEW",
-      note: "Solo 3.2% de reach PERO mediana 31.5 — los ~14 que la usan la usan MUCHO (más profundo que Broadcast). No matar a ciegas: cruzar con revenue/tier de cuenta antes de decidir. Podría anclar tus cuentas más grandes." },
-    { name: "Onboarding",              users: 475, totalEvents: 6450,    mean: 13.6,   median: 8.0,   p90: 29.0,    max: 361,   verdict: "KEEP",
-      note: "Funnel necesario. 54% de reach (transitorio por naturaleza)." },
-    { name: "AI Drafts & Suggestions", users: 283, totalEvents: 2521,    mean: 8.9,    median: 3.0,   p90: 18.8,    max: 239,   verdict: "IMPROVE",
-      note: "32% la prueban pero mediana 3 → no se vuelve pegajosa. Potencial desaprovechado: mejorar calidad/UX." },
-    { name: "Tasks",                   users: 295, totalEvents: 2331,    mean: 7.9,    median: 3.0,   p90: 23.0,    max: 151,   verdict: "WATCH",
-      note: "34% de reach pero uso superficial. Definir si es core o se consolida con Reminders." },
-    { name: "Volt Cloud",              users: 256, totalEvents: 2225,    mean: 8.7,    median: 5.0,   p90: 20.5,    max: 73,    verdict: "KEEP",
-      note: "Conector de infraestructura. 29% de reach; setup + reconexión recurrentes." },
-    { name: "Settings & UI",           users: 249, totalEvents: 2725,    mean: 10.9,   median: 3.0,   p90: 21.0,    max: 238,   verdict: "KEEP",
-      note: "Utilidad transversal. Algunos toggles (ej. tema) casi no se usan." },
-    { name: "Auth & Login",            users: 240, totalEvents: 1652,    mean: 6.9,    median: 4.0,   p90: 13.1,    max: 177,   verdict: "KEEP", infra: true,
-      note: "Necesario (OTP/login/WhatsApp). No es feature de producto per se." },
-    { name: "Integrations & App Store", users: 165, totalEvents: 1009,   mean: 6.1,    median: 3.0,   p90: 14.0,    max: 89,    verdict: "WATCH",
-      note: "19% navegan el App Store pero pocos conectan integraciones. Convertir exploración en conexión." },
-    { name: "Monetization / Upsell",   users: 155, totalEvents: 513,     mean: 3.3,    median: 2.0,   p90: 6.0,     max: 41,    verdict: "IMPROVE",
-      note: "155 ven el upsell, ~34 completan checkout. El funnel existe pero convierte poco." },
-    { name: "Workspaces & Team",       users: 144, totalEvents: 1081,    mean: 7.5,    median: 3.0,   p90: 12.0,    max: 79,    verdict: "WATCH",
-      note: "16% de reach y superficial. ¿Volt es individual o de equipo? Definir." },
-    { name: "Meeting & Call Commands", users: 108, totalEvents: 852,     mean: 7.9,    median: 4.0,   p90: 21.3,    max: 57,    verdict: "CONSOLIDATE",
-      note: "12% de reach. Meet funciona (99 users); Zoom casi muerto (19). Consolidar en un solo comando." },
-    { name: "Contacts & Groups",       users: 104, totalEvents: 859,     mean: 8.3,    median: 3.0,   p90: 20.5,    max: 78,    verdict: "WATCH",
-      note: "12% de reach. Funcionalidad básica de contactos/grupos." },
-    { name: "Reminders",               users: 102, totalEvents: 1295,    mean: 12.7,   median: 5.0,   p90: 22.7,    max: 302,   verdict: "WATCH",
-      note: "12% de reach pero mediana 5 → los que la usan vuelven. Nicho pegajoso. Posible merge con Tasks." },
-    { name: "HubSpot Integration",     users: 14,  totalEvents: 820,     mean: 58.6,   median: 35.0,  p90: 126.6,   max: 214,   verdict: "REVIEW",
-      note: "1.6% de reach pero la MAYOR profundidad por usuario fuera del core (mediana 35). Integración enterprise típica: esos 14 podrían ser tus cuentas más caras. Decisión de matar/mantener REQUIERE datos de revenue — no se sostiene solo con uso." }
+    { name: "Chat & Messaging", seg: {
+        Free:     { u: 448, t: 912477,  m: 2036.8, md: 184.0,  mx: 66545, me: 1892.5, tp: 7.3,  tu: "ae15356f" },
+        Premium:  { u: 146, t: 1756884, m: 12033.5, md: 7252.5, mx: 55016, me: 11737.0, tp: 3.1, tu: "05377919" },
+        Employee: { u: 18,  t: 96820,  m: 5378.9, md: 1857.0, mx: 38885, me: 3407.9, tp: 40.2, tu: "a0c28a6f" } } },
+    { name: "Voice & Transcription", seg: {
+        Free:     { u: 350, t: 178551, m: 510.1, md: 54.0,  mx: 8500, me: 487.3,  tp: 4.8,  tu: "ae15356f" },
+        Premium:  { u: 139, t: 194645, m: 1400.3, md: 903.0, mx: 7514, me: 1356.0, tp: 3.9, tu: "2de5b224" },
+        Employee: { u: 16,  t: 13182, m: 823.9, md: 453.0, mx: 2944, me: 682.5,  tp: 22.3, tu: "a0c28a6f" } } },
+    { name: "Command Palette & Nav", seg: {
+        Free:     { u: 258, t: 20390,  m: 79.0,  md: 7.0,   mx: 1956, me: 71.7,  tp: 9.6,  tu: "ae15356f" },
+        Premium:  { u: 130, t: 124740, m: 959.5, md: 342.0, mx: 6253, me: 918.5, tp: 5.0,  tu: "b957618e" },
+        Employee: { u: 17,  t: 6699,  m: 394.1, md: 99.0,  mx: 2027, me: 292.0, tp: 30.3, tu: "a0c28a6f" } } },
+    { name: "Lists & Organization", seg: {
+        Free:     { u: 358, t: 6041,  m: 16.9,  md: 3.0,  mx: 1302, me: 13.3,  tp: 21.6, tu: "4d26413f" },
+        Premium:  { u: 131, t: 71748, m: 547.7, md: 15.0, mx: 9931, me: 475.5, tp: 13.8, tu: "9b42fef7" },
+        Employee: { u: 18,  t: 3010, m: 167.2, md: 49.0, mx: 769,  me: 131.8, tp: 25.5, tu: "01281485" } } },
+    { name: "Search", seg: {
+        Free:     { u: 300, t: 41597, m: 138.7, md: 20.5, mx: 4241, me: 124.9, tp: 10.2, tu: "ae15356f" },
+        Premium:  { u: 139, t: 35671, m: 256.6, md: 87.0, mx: 2902, me: 237.5, tp: 8.1,  tu: "3e6f2e08" },
+        Employee: { u: 13,  t: 749,   m: 57.6,  md: 24.0, mx: 361,  me: 32.3,  tp: 48.2, tu: "5800db99" } } },
+    { name: "Broadcast", seg: {
+        Free:     { u: 57, t: 2356,  m: 41.3,   md: 1.0, mx: 841,   me: 27.1,   tp: 35.7, tu: "fade3c6e" },
+        Premium:  { u: 32, t: 52733, m: 1647.9, md: 2.0, mx: 16766, me: 1160.2, tp: 31.8, tu: "bd9533c7" },
+        Employee: { u: 9,  t: 500,   m: 55.6,   md: 3.0, mx: 464,   me: 4.5,    tp: 92.8, tu: "361a5123" } } },
+    { name: "MCP / Developer API", seg: {
+        Free:     { u: 109, t: 8570,  m: 78.6,  md: 3.0,  mx: 2871, me: 52.8,  tp: 33.5, tu: "6f40b097" },
+        Premium:  { u: 64,  t: 25234, m: 394.3, md: 4.0,  mx: 7975, me: 274.0, tp: 31.6, tu: "9962ef3c" },
+        Employee: { u: 9,   t: 238,   m: 26.4,  md: 12.0, mx: 121,  me: 14.6,  tp: 50.8, tu: "361a5123" } } },
+    { name: "Send Later / Scheduling", seg: {
+        Free:     { u: 396, t: 5115,  m: 12.9, md: 6.0,  mx: 152,  me: 12.6, tp: 3.0,  tu: "9783edce" },
+        Premium:  { u: 136, t: 11309, m: 83.2, md: 25.0, mx: 2405, me: 66.0, tp: 21.3, tu: "05d19df6" },
+        Employee: { u: 16,  t: 1525,  m: 95.3, md: 31.5, mx: 447,  me: 71.9, tp: 29.3, tu: "361a5123" } } },
+    { name: "CRM / Tickets / Issues", seg: {
+        Free:     { u: 11, t: 648,   m: 58.9,  md: 13.0,  mx: 439,  me: 20.9,  tp: 67.7, tu: "404f91ce" },
+        Premium:  { u: 15, t: 14280, m: 952.0, md: 17.0,  mx: 5290, me: 642.1, tp: 37.0, tu: "ed216392" },
+        Employee: { u: 7,  t: 1073,  m: 153.3, md: 100.0, mx: 445,  me: 104.7, tp: 41.5, tu: "3d56f4a7" } } },
+    { name: "Onboarding", seg: {
+        Free:     { u: 336, t: 2669, m: 7.9,  md: 6.0,  mx: 47,  me: 7.8,  tp: 1.8,  tu: "e49f8331" },
+        Premium:  { u: 134, t: 2499, m: 18.6, md: 16.0, mx: 97,  me: 18.1, tp: 3.9,  tu: "9962ef3c" },
+        Employee: { u: 17,  t: 815,  m: 47.9, md: 11.0, mx: 353, me: 28.9, tp: 43.3, tu: "2842c620" } } },
+    { name: "Settings & UI", seg: {
+        Free:     { u: 131, t: 651,  m: 5.0,  md: 2.0, mx: 47,  me: 4.6,  tp: 7.2,  tu: "2842c620" },
+        Premium:  { u: 90,  t: 1316, m: 14.6, md: 7.0, mx: 133, me: 13.3, tp: 10.1, tu: "00a9ef57" },
+        Employee: { u: 14,  t: 625,  m: 44.6, md: 6.5, mx: 207, me: 32.2, tp: 33.1, tu: "361a5123" } } },
+    { name: "AI Drafts & Suggestions", seg: {
+        Free:     { u: 157, t: 808,  m: 5.1,  md: 2.0, mx: 114, me: 4.4,  tp: 14.1, tu: "068da5c3" },
+        Premium:  { u: 97,  t: 1497, m: 15.4, md: 6.0, mx: 239, me: 13.1, tp: 16.0, tu: "a70669d6" },
+        Employee: { u: 12,  t: 71,   m: 5.9,  md: 4.5, mx: 27,  me: 4.0,  tp: 38.0, tu: "361a5123" } } },
+    { name: "Volt Cloud", seg: {
+        Free:     { u: 149, t: 794,  m: 5.3,  md: 4.0, mx: 25, me: 5.2,  tp: 3.1,  tu: "bc5bbe6a" },
+        Premium:  { u: 95,  t: 1266, m: 13.3, md: 8.0, mx: 73, me: 12.7, tp: 5.8,  tu: "0284115e" },
+        Employee: { u: 13,  t: 117,  m: 9.0,  md: 8.0, mx: 26, me: 7.6,  tp: 22.2, tu: "361a5123" } } },
+    { name: "Tasks", seg: {
+        Free:     { u: 202, t: 1210, m: 6.0,  md: 2.0, mx: 55,  me: 5.7, tp: 4.5,  tu: "4d26413f" },
+        Premium:  { u: 83,  t: 911,  m: 11.0, md: 4.0, mx: 129, me: 9.5, tp: 14.2, tu: "0284115e" },
+        Employee: { u: 15,  t: 110,  m: 7.3,  md: 4.0, mx: 25,  me: 6.1, tp: 22.7, tu: "5800db99" } } },
+    { name: "Reminders", seg: {
+        Free:     { u: 7,  t: 45,  m: 6.4,  md: 6.0,  mx: 13,  me: 5.3,  tp: 28.9, tu: "441406a4" },
+        Premium:  { u: 60, t: 858, m: 14.3, md: 6.0,  mx: 302, me: 9.4,  tp: 35.2, tu: "b957618e" },
+        Employee: { u: 8,  t: 275, m: 34.4, md: 25.5, mx: 122, me: 21.9, tp: 44.4, tu: "2842c620" } } },
+    { name: "Integrations & App Store", seg: {
+        Free:     { u: 108, t: 453, m: 4.2,  md: 2.0,  mx: 23, me: 4.0,  tp: 5.1,  tu: "980cc87a" },
+        Premium:  { u: 55,  t: 315, m: 5.7,  md: 2.0,  mx: 55, me: 4.8,  tp: 17.5, tu: "0ee76e12" },
+        Employee: { u: 8,   t: 205, m: 25.6, md: 16.5, mx: 89, me: 16.6, tp: 43.4, tu: "3d56f4a7" } } },
+    { name: "Workspaces & Team", seg: {
+        Free:     { u: 86, t: 439, m: 5.1,  md: 3.5,  mx: 39, me: 4.7,  tp: 8.9,  tu: "fbfd75f7" },
+        Premium:  { u: 48, t: 344, m: 7.2,  md: 3.0,  mx: 62, me: 6.0,  tp: 18.0, tu: "f1957bfe" },
+        Employee: { u: 9,  t: 155, m: 17.2, md: 10.0, mx: 67, me: 11.0, tp: 43.2, tu: "01281485" } } },
+    { name: "Meeting & Call Commands", seg: {
+        Free:     { u: 46, t: 226, m: 4.9,  md: 2.0,  mx: 35, me: 4.2,  tp: 15.5, tu: "f3a7ad61" },
+        Premium:  { u: 54, t: 472, m: 8.7,  md: 4.0,  mx: 57, me: 7.8,  tp: 12.1, tu: "38d28446" },
+        Employee: { u: 9,  t: 148, m: 16.4, md: 19.0, mx: 30, me: 14.8, tp: 20.3, tu: "361a5123" } } },
+    { name: "HubSpot Integration", seg: {
+        Free:     { u: 6, t: 282, m: 47.0, md: 15.5, mx: 141, me: 28.2, tp: 50.0, tu: "2b9f524a" },
+        Premium:  { u: 8, t: 422, m: 52.8, md: 29.5, mx: 207, me: 30.7, tp: 49.1, tu: "92c4c8ef" },
+        Employee: { u: 3, t: 116, m: 38.7, md: 21.0, mx: 93,  me: 11.5, tp: 80.2, tu: "3d56f4a7" } } },
+    { name: "Contacts & Groups", seg: {
+        Free:     { u: 21, t: 158, m: 7.5, md: 3.0, mx: 69, me: 4.4, tp: 43.7, tu: "e0e89de3" },
+        Premium:  { u: 62, t: 590, m: 9.5, md: 4.0, mx: 78, me: 8.4, tp: 13.2, tu: "9641c310" },
+        Employee: { u: 7,  t: 67,  m: 9.6, md: 3.0, mx: 31, me: 6.0, tp: 46.3, tu: "361a5123" } } },
+    { name: "Monetization / Upsell", seg: {
+        Free:     { u: 140, t: 407, m: 2.9,  md: 2.0,  mx: 20, me: 2.8, tp: 4.9,  tu: "2842c620" },
+        Premium:  { u: 23,  t: 55,  m: 2.4,  md: 1.0,  mx: 13, me: 1.9, tp: 23.6, tu: "ea90eea9" },
+        Employee: { u: 2,   t: 22,  m: 11.0, md: 11.0, mx: 21, me: 1.0, tp: 95.5, tu: "2842c620" } } }
   ],
 
-  /* ---------------------------------------------------------------------------
-     TOP USER-FACING FEATURES (event level) — for "most used" + outlier drill-down.
-     trimmedMean = media excluyendo el top 5% de usuarios (corte P95).
-     pctFromOutliers = % de eventos generados por ese top 5%.
-     median = el número "real" representativo (resistente a outliers).
-     --------------------------------------------------------------------------- */
-  features: [
-    { name: "Chat Open",                      group: "Chat & Messaging",   users: 799, total: 2667087, mean: 3338.0, median: 157,  trimmedMean: 1902.0, pctFromOutliers: 45.9 },
-    { name: "Transcription Displayed",        group: "Voice & Transcription", users: 612, total: 245797, mean: 401.6, median: 34, trimmedMean: 212.7, pctFromOutliers: 49.7 },
-    { name: "Transcription Failed (Seen)",    group: "Voice & Transcription", users: 392, total: 165125, mean: 421.2, median: 57, trimmedMean: 234.1, pctFromOutliers: 47.3 },
-    { name: "Toggle Command Palette",         group: "Command Palette & Nav", users: 369, total: 148095, mean: 401.3, median: 17, trimmedMean: 228.5, pctFromOutliers: 46.0 },
-    { name: "Focus Compose Box and Type",     group: "Chat & Messaging",   users: 526, total: 134577, mean: 255.8, median: 34,  trimmedMean: 130.0,  pctFromOutliers: 51.8 },
-    { name: "Search",                         group: "Search",             users: 454, total: 79325,  mean: 174.7, median: 34,  trimmedMean: 100.7,  pctFromOutliers: 45.3 },
-    { name: "Archive Chat",                   group: "Lists & Organization", users: 128, total: 79875, mean: 624.0, median: 8,  trimmedMean: 229.0,  pctFromOutliers: 65.3 },
-    { name: "MCP Tool Called",                group: "MCP / Developer API", users: 58, total: 33137,  mean: 571.3, median: 34,  trimmedMean: 277.4,  pctFromOutliers: 54.0 },
-    { name: "Broadcast Message Sent (media)", group: "Broadcast",          users: 13,  total: 32488,  mean: 2499.1, median: 96, trimmedMean: 1351.3, pctFromOutliers: 50.1 },
-    { name: "Focus Compose Box",              group: "Chat & Messaging",   users: 399, total: 26858,  mean: 67.3,  median: 7,   trimmedMean: 21.3,   pctFromOutliers: 69.9 },
-    { name: "Broadcast Message Sent (text)",  group: "Broadcast",          users: 29,  total: 25542,  mean: 880.8, median: 14,  trimmedMean: 271.0,  pctFromOutliers: 71.3 },
-    { name: "Focus Chat List",                group: "Chat & Messaging",   users: 345, total: 22092,  mean: 64.0,  median: 7,   trimmedMean: 23.4,   pctFromOutliers: 65.4 },
-    { name: "Focus Chat Messages",            group: "Chat & Messaging",   users: 289, total: 19355,  mean: 67.0,  median: 4,   trimmedMean: 21.4,   pctFromOutliers: 69.8 },
-    { name: "Reply Message",                  group: "Chat & Messaging",   users: 242, total: 10448,  mean: 43.2,  median: 4,   trimmedMean: 16.4,   pctFromOutliers: 64.1 },
-    { name: "Navigate Filter",                group: "Command Palette & Nav", users: 293, total: 9646, mean: 32.9, median: 5,   trimmedMean: 9.9,    pctFromOutliers: 71.5 },
-    { name: "Open All Scheduled Messages",    group: "Send Later / Scheduling", users: 502, total: 6058, mean: 12.1, median: 5, trimmedMean: 6.8,   pctFromOutliers: 46.8 },
-    { name: "Open Chat",                      group: "Chat & Messaging",   users: 293, total: 4505,   mean: 15.4,  median: 3,   trimmedMean: 6.1,    pctFromOutliers: 62.3 },
-    { name: "Toggle Send Later Mode",         group: "Send Later / Scheduling", users: 323, total: 3586, mean: 11.1, median: 3, trimmedMean: 5.4,   pctFromOutliers: 53.6 },
-    { name: "Edit Message",                   group: "Chat & Messaging",   users: 185, total: 3389,   mean: 18.3,  median: 2,   trimmedMean: 6.4,    pctFromOutliers: 66.7 },
-    { name: "Star Message",                   group: "Chat & Messaging",   users: 229, total: 2948,   mean: 12.9,  median: 6,   trimmedMean: 9.9,    pctFromOutliers: 27.4 },
-    { name: "Schedule Attempt",               group: "Send Later / Scheduling", users: 227, total: 2834, mean: 12.5, median: 3, trimmedMean: 5.5,   pctFromOutliers: 58.0 },
-    { name: "Send and Archive",               group: "Chat & Messaging",   users: 131, total: 2811,   mean: 21.5,  median: 3,   trimmedMean: 5.5,    pctFromOutliers: 75.7 },
-    { name: "Message Scheduled",              group: "Send Later / Scheduling", users: 221, total: 2364, mean: 10.7, median: 2, trimmedMean: 4.8,   pctFromOutliers: 57.4 },
-    { name: "React to Message",               group: "Chat & Messaging",   users: 190, total: 2148,   mean: 11.3,  median: 2,   trimmedMean: 4.1,    pctFromOutliers: 65.7 },
-    { name: "Accept Suggestion (AI)",         group: "AI Drafts & Suggestions", users: 242, total: 1925, mean: 8.0, median: 2.5, trimmedMean: 4.9,  pctFromOutliers: 41.4 },
-    { name: "Create List",                    group: "Lists & Organization", users: 307, total: 1756, mean: 5.7,  median: 3,   trimmedMean: 3.8,    pctFromOutliers: 36.7 },
-    { name: "Task Set",                       group: "Tasks",              users: 234, total: 1554,   mean: 6.6,   median: 2,   trimmedMean: 4.6,    pctFromOutliers: 33.8 },
-    { name: "Pin Message",                    group: "Chat & Messaging",   users: 218, total: 1492,   mean: 6.8,   median: 4,   trimmedMean: 5.5,    pctFromOutliers: 23.1 },
-    { name: "Copy Message",                   group: "Chat & Messaging",   users: 222, total: 1442,   mean: 6.5,   median: 3,   trimmedMean: 4.9,    pctFromOutliers: 28.7 },
-    { name: "Search Message in Chat",         group: "Search",             users: 189, total: 1157,   mean: 6.1,   median: 3,   trimmedMean: 3.9,    pctFromOutliers: 39.8 },
-    { name: "Volt Cloud Settings Opened",     group: "Volt Cloud",         users: 218, total: 1039,   mean: 4.8,   median: 3,   trimmedMean: 3.8,    pctFromOutliers: 23.6 },
-    { name: "Forward Message",                group: "Chat & Messaging",   users: 156, total: 736,    mean: 4.7,   median: 2,   trimmedMean: 2.9,    pctFromOutliers: 41.8 },
-    { name: "Start Broadcasting",             group: "Broadcast",          users: 34,  total: 645,    mean: 19.0,  median: 2,   trimmedMean: 7.7,    pctFromOutliers: 61.7 },
-    { name: "App Store Drawer Opened",        group: "Integrations & App Store", users: 122, total: 608, mean: 5.0, median: 2, trimmedMean: 3.4,    pctFromOutliers: 35.4 },
-    { name: "Delete Message",                 group: "Chat & Messaging",   users: 169, total: 562,    mean: 3.3,   median: 2,   trimmedMean: 2.4,    pctFromOutliers: 32.2 },
-    { name: "Start Transcribing",             group: "Voice & Transcription", users: 142, total: 553, mean: 3.9,   median: 2,   trimmedMean: 2.8,    pctFromOutliers: 30.6 },
-    { name: "Ticket Created",                 group: "CRM / Tickets / Issues", users: 12, total: 519, mean: 43.2,  median: 4.5, trimmedMean: 30.9,   pctFromOutliers: 34.5 },
-    { name: "Create MCP API Key",             group: "MCP / Developer API", users: 119, total: 311,   mean: 2.6,   median: 2,   trimmedMean: 2.4,    pctFromOutliers: 18.0 },
-    { name: "Meet Command Triggered",         group: "Meeting & Call Commands", users: 99, total: 470, mean: 4.7,  median: 2,   trimmedMean: 3.7,    pctFromOutliers: 25.1 },
-    { name: "HubSpot Drawer Button",          group: "HubSpot Integration", users: 13, total: 451,    mean: 34.7,  median: 19,  trimmedMean: 27.9,   pctFromOutliers: 25.7 },
-    { name: "Reminder usage",                 group: "Reminders",          users: 60,  total: 386,    mean: 6.4,   median: 3,   trimmedMean: null,   pctFromOutliers: null },
-    { name: "Upsell Modal Shown",             group: "Monetization / Upsell", users: 105, total: 178, mean: 1.7,   median: 1,   trimmedMean: null,   pctFromOutliers: null },
-    { name: "Upsell Checkout Completed",      group: "Monetization / Upsell", users: 34, total: 38,   mean: 1.1,   median: 1,   trimmedMean: null,   pctFromOutliers: null },
-    { name: "Zoom Command Triggered",         group: "Meeting & Call Commands", users: 19, total: 40,  mean: 2.1,  median: 1,   trimmedMean: null,   pctFromOutliers: null },
-    { name: "Generate Draft with AI",         group: "AI Drafts & Suggestions", users: 13, total: 30,  mean: 2.3,  median: 1,   trimmedMean: null,   pctFromOutliers: null },
-    { name: "Toggle Light/Dark Mode",         group: "Settings & UI",      users: 7,   total: 26,     mean: 3.7,   median: 3,   trimmedMean: null,   pctFromOutliers: null },
-    { name: "Memory",                         group: "Settings & UI",      users: 7,   total: 15,     mean: 2.1,   median: 1,   trimmedMean: null,   pctFromOutliers: null }
-  ],
-
-  /* ---------------------------------------------------------------------------
-     CURATED RECOMMENDATIONS (kill / improve / keep)
-     --------------------------------------------------------------------------- */
-  recommendations: {
-    kill: [
-      { name: "Comando Zoom", metric: "19 usuarios (vs 99 de Meet)", why: "Redundante y casi muerto frente a Meet. Consolidar todos los comandos de reunión en uno solo. Riesgo bajo, decisión clara." },
-      { name: "Toggle Light/Dark Mode", metric: "7 usuarios · mediana 3", why: "Casi nadie cambia el tema. No invertir más; mantener un default y listo. Remoción cosmética, sin riesgo." },
-      { name: "\"Memory\" feature", metric: "7 usuarios · mediana 1", why: "Adopción casi nula y sin profundidad. Candidata clara a remover o repensar por completo. Riesgo bajo." }
-    ],
-    review: [
-      { name: "HubSpot Integration", metric: "1.6% reach · pero mediana 35", why: "La MAYOR profundidad por usuario fuera del core. 14 usuarios que la usan intensamente — posiblemente cuentas enterprise de alto valor. NO matar sin cruzar revenue/tier de cuenta. Decisión bloqueada hasta tener ese dato." },
-      { name: "CRM / Tickets / Issues", metric: "3.2% reach · pero mediana 31.5", why: "Mismo patrón: poca reach, altísima profundidad en ~14 usuarios. Más profundo que Broadcast (que sí mantenemos). La coherencia obliga a evaluarla por valor de cuenta, no por reach." }
-    ],
-    improve: [
-      { name: "AI Drafts & Suggestions", metric: "32% prueban · mediana 3", why: "Se prueba mucho pero no engancha. Hay producto acá: subir calidad de drafts y reducir fricción para volverla pegajosa." },
-      { name: "Monetization / Upsell", metric: "105 ven modal · 34 convierten (~32%)", why: "El funnel de upsell existe y convierte ~32% de quienes ven el modal. Optimizar mensaje, timing y pricing para subir ese número." },
-      { name: "Integrations & App Store", metric: "19% navegan, pocos conectan", why: "Se explora el App Store pero la conexión cae. Reducir fricción del connect y destacar integraciones con valor." },
-      { name: "Tasks + Reminders", metric: "34% y 12% · superficiales", why: "Dos features de productividad superpuestas y poco profundas. Evaluar consolidarlas en una sola." }
-    ],
-    keep: [
-      { name: "Chat & Messaging", metric: "91.6% reach", why: "El core absoluto. Toda inversión en performance y fiabilidad acá rinde." },
-      { name: "Voice & Transcription", metric: "72.6% reach · mediana 73", why: "Diferenciador con engagement profundo. Es la razón por la que muchos usan Volt." },
-      { name: "Search · Lists · Command Palette · Send Later", metric: "54–68% reach", why: "Cuarteto de productividad de alta adopción. Mantener y pulir." },
-      { name: "Broadcast", metric: "~30 envían · volumen enorme", why: "Nicho real (solo ~30 envían) pero de altísimo volumen para quien la usa. No matar: empaquetar y monetizar como feature premium." },
-      { name: "MCP / Developer API", metric: "20% reach (alto para dev API)", why: "Adopción inesperadamente alta para una función de developers. Apuesta de futuro — confirmar trayectoria con un corte temporal antes de escalar inversión." }
-    ]
-  }
+  // Comandos de reunión (/meet, /zoom) — NO tienen outlier; simplemente se usan poco
+  meetZoom: [
+    { cmd: "/meet (triggered)", u: 101, t: 470, m: 4.7, md: 2.0, tp: 6.8,  tu: "38d28446", me: 4.4 },
+    { cmd: "/meet (completado)", u: 66, t: 316, m: 4.8, md: 2.0, tp: 8.2,  tu: "ea90eea9", me: 4.5 },
+    { cmd: "/zoom (triggered)",  u: 20, t: 40,  m: 2.0, md: 1.0, tp: 12.5, tu: "361a5123", me: 1.8 },
+    { cmd: "/zoom (completado)", u: 12, t: 26,  m: 2.2, md: 2.0, tp: 15.4, tu: "361a5123", me: 2.0 }
+  ]
 };

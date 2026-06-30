@@ -3,299 +3,239 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Volt · Reporte de Uso de Features</title>
-  <meta name="description" content="Análisis profundo del uso de funcionalidades de Volt en PostHog — features más usadas, promedio por usuario, outliers y recomendaciones de qué matar y qué mantener." />
+  <title>Volt · Revisión de funcionalidades por segmento</title>
+  <meta name="description" content="Uso de cada funcionalidad de Volt dividido en Free, Premium y Employee — con detección y exclusión de usuarios outlier para mostrar el dato real." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
   <style>
     :root{
-      --bg:#0a0b0f; --bg2:#0e1016; --surface:#14161f; --surface2:#1a1d28;
-      --line:#262a37; --line2:#333848;
-      --text:#e9ecf5; --muted:#969eb3; --faint:#646c82;
-      --volt:#d6ff3d; --volt-dim:#a9cc2f; --cyan:#3ad6ff; --violet:#9b8cff;
-      --green:#46e08a; --amber:#ffcb45; --red:#ff5d6c; --orange:#ff944d;
-      --radius:16px; --radius-sm:10px;
+      --bg:#ffffff; --bg2:#f6f8f5; --surface:#ffffff; --navy:#0f172b; --navy2:#101828;
+      --line:#e6e8ec; --line2:#d7dbe0;
+      --text:#0f172b; --muted:#5a6473; --faint:#9aa3b2;
+      --volt:#a0ff79; --volt-deep:#3a9e1e; --volt-mid:#58b836;
+      --free:#3a9e1e; --premium:#b060ff; --employee:#f59e0b;
+      --radius:14px; --radius-sm:10px;
     }
     *{box-sizing:border-box;margin:0;padding:0}
     html{scroll-behavior:smooth}
-    body{
-      background:var(--bg); color:var(--text);
-      font-family:'Inter',system-ui,-apple-system,sans-serif;
-      line-height:1.55; -webkit-font-smoothing:antialiased;
-      background-image:radial-gradient(1200px 600px at 80% -10%, rgba(214,255,61,.06), transparent 60%),radial-gradient(900px 500px at 0% 0%, rgba(58,214,255,.05), transparent 55%);
-      background-attachment:fixed;
-    }
-    h1,h2,h3,.display{font-family:'Space Grotesk','Inter',sans-serif;letter-spacing:-.02em}
+    body{background:var(--bg);color:var(--text);font-family:'Inter',system-ui,-apple-system,sans-serif;
+      line-height:1.5;-webkit-font-smoothing:antialiased}
+    h1,h2,h3{letter-spacing:-.025em;font-weight:700}
     a{color:inherit}
-    .wrap{max-width:1180px;margin:0 auto;padding:0 24px}
+    .wrap{max-width:1160px;margin:0 auto;padding:0 24px}
+    .mono{font-variant-numeric:tabular-nums;font-feature-settings:"tnum"}
 
     /* NAV */
-    header.nav{position:sticky;top:0;z-index:50;backdrop-filter:blur(12px);
-      background:rgba(10,11,15,.72);border-bottom:1px solid var(--line)}
+    header.nav{position:sticky;top:0;z-index:50;background:rgba(255,255,255,.85);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
     .nav-inner{display:flex;align-items:center;gap:24px;height:60px}
-    .brand{display:flex;align-items:center;gap:10px;font-family:'Space Grotesk';font-weight:700;font-size:17px}
-    .brand .dot{width:11px;height:11px;border-radius:3px;background:var(--volt);box-shadow:0 0 14px var(--volt)}
-    .nav-links{display:flex;gap:22px;margin-left:auto;font-size:13.5px;color:var(--muted)}
+    .brand{display:flex;align-items:center;gap:9px;font-weight:800;font-size:18px;letter-spacing:-.03em}
+    .brand .bolt{display:inline-grid;place-items:center;width:26px;height:26px;border-radius:8px;background:var(--volt);color:#0f172b;font-size:15px}
+    .nav-links{display:flex;gap:22px;margin-left:auto;font-size:14px;color:var(--muted)}
     .nav-links a{text-decoration:none;transition:color .15s}
-    .nav-links a:hover{color:var(--volt)}
-    @media(max-width:780px){.nav-links{display:none}}
+    .nav-links a:hover{color:var(--volt-deep)}
+    @media(max-width:820px){.nav-links{display:none}}
 
     /* HERO */
-    .hero{padding:72px 0 40px;position:relative}
-    .eyebrow{display:inline-flex;align-items:center;gap:8px;font-size:12.5px;letter-spacing:.14em;
-      text-transform:uppercase;color:var(--volt);font-weight:600;margin-bottom:20px;
-      border:1px solid var(--line2);padding:6px 12px;border-radius:100px;background:var(--surface)}
-    .hero h1{font-size:clamp(34px,6vw,62px);font-weight:700;line-height:1.02;max-width:16ch}
-    .hero h1 .hl{color:var(--volt)}
-    .hero p.lead{margin-top:22px;font-size:clamp(16px,2.2vw,20px);color:var(--muted);max-width:62ch}
-    .period{margin-top:18px;font-size:13.5px;color:var(--faint);display:flex;gap:18px;flex-wrap:wrap}
+    .hero{padding:64px 0 40px}
+    .eyebrow{display:inline-flex;align-items:center;gap:8px;font-size:12px;letter-spacing:.12em;text-transform:uppercase;
+      color:var(--volt-deep);font-weight:700;margin-bottom:18px;background:#eefce4;border:1px solid #d6f3c2;padding:6px 12px;border-radius:100px}
+    .hero h1{font-size:clamp(32px,5.5vw,56px);line-height:1.03;font-weight:800;max-width:18ch}
+    .hero h1 .u{box-shadow:inset 0 -.32em 0 var(--volt)}
+    .hero p.lead{margin-top:20px;font-size:clamp(15px,2vw,18px);color:var(--muted);max-width:60ch}
+    .period{margin-top:16px;font-size:13px;color:var(--faint);display:flex;gap:16px;flex-wrap:wrap}
     .period b{color:var(--text);font-weight:600}
 
-    /* KPI */
-    .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-top:48px}
-    @media(max-width:900px){.kpis{grid-template-columns:repeat(2,1fr)}}
-    .kpi{background:linear-gradient(160deg,var(--surface),var(--bg2));border:1px solid var(--line);
-      border-radius:var(--radius);padding:22px 20px;position:relative;overflow:hidden}
-    .kpi::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,transparent,rgba(214,255,61,.03));pointer-events:none}
-    .kpi .v{font-family:'Space Grotesk';font-size:34px;font-weight:700;line-height:1;color:var(--volt)}
-    .kpi .l{margin-top:10px;font-size:13px;color:var(--muted)}
-    .kpi .s{margin-top:4px;font-size:11.5px;color:var(--faint)}
+    /* segment KPI cards */
+    .segcards{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:42px}
+    @media(max-width:760px){.segcards{grid-template-columns:1fr}}
+    .segcard{border:1px solid var(--line);border-radius:var(--radius);padding:22px;position:relative;overflow:hidden;background:var(--surface)}
+    .segcard::before{content:"";position:absolute;left:0;top:0;bottom:0;width:5px}
+    .segcard.Free::before{background:var(--free)} .segcard.Premium::before{background:var(--premium)} .segcard.Employee::before{background:var(--employee)}
+    .segcard .tag{font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase}
+    .segcard.Free .tag{color:var(--free)} .segcard.Premium .tag{color:var(--premium)} .segcard.Employee .tag{color:var(--employee)}
+    .segcard .users{font-size:34px;font-weight:800;line-height:1;margin-top:10px}
+    .segcard .row{margin-top:12px;font-size:13px;color:var(--muted);display:flex;justify-content:space-between;border-top:1px solid var(--line);padding-top:9px}
+    .segcard .row b{color:var(--text);font-weight:600}
 
     /* SECTION */
-    section{padding:64px 0;border-top:1px solid var(--line)}
-    .sec-head{margin-bottom:34px;max-width:70ch}
-    .sec-tag{font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:var(--volt-dim);font-weight:600}
-    .sec-head h2{font-size:clamp(26px,4vw,38px);font-weight:700;margin-top:10px}
-    .sec-head p{margin-top:14px;color:var(--muted);font-size:16px}
+    section{padding:54px 0;border-top:1px solid var(--line)}
+    .sec-head{margin-bottom:26px;max-width:74ch}
+    .sec-tag{font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--volt-deep);font-weight:700}
+    .sec-head h2{font-size:clamp(23px,3.4vw,32px);margin-top:8px}
+    .sec-head p{margin-top:10px;color:var(--muted);font-size:15px}
 
-    .card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:24px}
-    .chart{width:100%;height:440px}
-    .chart.tall{height:540px}
+    .card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:22px}
+    .chart{width:100%;height:380px}
+    .chart.tall{height:880px}
+    .chart.mid{height:460px}
 
-    /* callout */
-    .callout{background:linear-gradient(135deg,rgba(214,255,61,.08),rgba(58,214,255,.05));
-      border:1px solid var(--line2);border-radius:var(--radius);padding:26px 28px;margin-top:24px}
-    .callout .big{font-family:'Space Grotesk';font-size:clamp(22px,3vw,30px);font-weight:600;line-height:1.25}
-    .callout .big b{color:var(--volt)}
-    .callout p{color:var(--muted);margin-top:12px;font-size:15px}
-
-    /* controls */
-    .toggle{display:inline-flex;border:1px solid var(--line2);border-radius:100px;padding:4px;background:var(--bg2);gap:4px}
-    .toggle button{border:0;background:transparent;color:var(--muted);font:inherit;font-size:13.5px;
-      padding:7px 16px;border-radius:100px;cursor:pointer;transition:.15s;font-weight:500}
-    .toggle button.on{background:var(--volt);color:#0a0b0f;font-weight:600}
+    /* legend / toggle */
+    .controls{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:16px}
+    .seg-legend{display:flex;gap:16px;font-size:13px;color:var(--muted);flex-wrap:wrap}
+    .seg-legend span{display:inline-flex;align-items:center;gap:7px}
+    .seg-legend i{width:12px;height:12px;border-radius:3px;display:inline-block}
+    .toggle{display:inline-flex;border:1px solid var(--line2);border-radius:100px;padding:4px;background:#f3f5f7;gap:3px}
+    .toggle button{border:0;background:transparent;color:var(--muted);font:inherit;font-size:13px;font-weight:600;padding:7px 15px;border-radius:100px;cursor:pointer;transition:.12s}
+    .toggle button.on{background:var(--navy);color:#fff}
 
     /* TABLE */
     .table-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:var(--radius);background:var(--surface)}
-    table{width:100%;border-collapse:collapse;font-size:14px;min-width:760px}
-    thead th{text-align:left;padding:14px 16px;font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;
-      color:var(--faint);font-weight:600;border-bottom:1px solid var(--line2);white-space:nowrap;cursor:pointer;user-select:none}
-    thead th:hover{color:var(--volt)}
-    thead th.num,td.num{text-align:right;font-variant-numeric:tabular-nums}
-    tbody td{padding:13px 16px;border-bottom:1px solid var(--line)}
+    table{width:100%;border-collapse:collapse;font-size:13.5px;min-width:880px}
+    thead th{text-align:right;padding:13px 14px;font-size:11px;letter-spacing:.04em;text-transform:uppercase;color:var(--faint);
+      font-weight:700;border-bottom:1px solid var(--line2);white-space:nowrap;cursor:pointer;user-select:none}
+    thead th:first-child{text-align:left}
+    thead th:hover{color:var(--volt-deep)}
+    thead th.grp{text-align:left}
+    tbody td{padding:12px 14px;border-bottom:1px solid var(--line);text-align:right}
+    tbody td:first-child{text-align:left;font-weight:600}
     tbody tr:last-child td{border-bottom:0}
-    tbody tr:hover{background:var(--surface2)}
-    .fname{font-weight:600;color:var(--text)}
-    .bar-cell{display:flex;align-items:center;gap:10px;min-width:120px}
-    .bar-track{flex:1;height:7px;background:var(--line2);border-radius:6px;overflow:hidden;min-width:60px}
-    .bar-fill{height:100%;border-radius:6px;background:linear-gradient(90deg,var(--volt-dim),var(--volt))}
-    .bar-num{font-variant-numeric:tabular-nums;font-size:12.5px;color:var(--muted);width:42px;text-align:right}
+    tbody tr:hover{background:#fafbfc}
+    .seg-dot{display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:6px;vertical-align:middle}
+    .flag{display:inline-block;font-size:11px;font-weight:700;padding:2px 7px;border-radius:5px;background:#fff3e0;color:#c2710c;border:1px solid #ffd9a8}
 
-    .badge{font-size:11px;font-weight:700;letter-spacing:.04em;padding:4px 9px;border-radius:6px;white-space:nowrap;text-transform:uppercase}
-    .b-CRITICAL{background:rgba(70,224,138,.15);color:var(--green);border:1px solid rgba(70,224,138,.3)}
-    .b-KEEP{background:rgba(58,214,255,.13);color:var(--cyan);border:1px solid rgba(58,214,255,.28)}
-    .b-GROW{background:rgba(155,140,255,.15);color:var(--violet);border:1px solid rgba(155,140,255,.3)}
-    .b-IMPROVE{background:rgba(255,203,69,.14);color:var(--amber);border:1px solid rgba(255,203,69,.3)}
-    .b-WATCH{background:rgba(255,148,77,.13);color:var(--orange);border:1px solid rgba(255,148,77,.3)}
-    .b-CONSOLIDATE{background:rgba(255,148,77,.13);color:var(--orange);border:1px solid rgba(255,148,77,.3)}
-    .b-RECONSIDER{background:rgba(255,93,108,.14);color:var(--red);border:1px solid rgba(255,93,108,.32)}
-    .b-REVIEW{background:rgba(255,122,162,.14);color:#ff7aa2;border:1px solid rgba(255,122,162,.32)}
+    /* outlier cards */
+    .out-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+    @media(max-width:900px){.out-grid{grid-template-columns:1fr}}
+    .out-card{border:1px solid var(--line);border-left:4px solid var(--employee);border-radius:var(--radius);padding:18px;background:var(--surface)}
+    .out-card .h{font-weight:700;font-size:15px}
+    .out-card .seg{font-size:11.5px;font-weight:700;text-transform:uppercase;letter-spacing:.04em}
+    .out-card .nums{display:flex;gap:18px;margin-top:14px}
+    .out-card .nums div{flex:1}
+    .out-card .nums .lbl{font-size:11px;color:var(--faint);text-transform:uppercase;letter-spacing:.04em}
+    .out-card .nums .val{font-size:22px;font-weight:800;margin-top:2px}
+    .out-card .real .val{color:var(--volt-deep)}
+    .out-card .who{margin-top:13px;font-size:12.5px;color:var(--muted);border-top:1px solid var(--line);padding-top:11px}
+    .out-card .who code{background:#f3f5f7;padding:1px 6px;border-radius:5px;color:var(--navy);font-weight:600}
 
-    .legend{display:flex;flex-wrap:wrap;gap:14px;margin-top:18px;font-size:12.5px;color:var(--muted)}
-    .legend span{display:inline-flex;align-items:center;gap:7px}
-    .legend i{width:11px;height:11px;border-radius:3px;display:inline-block}
+    .note-sm{font-size:12.5px;color:var(--faint);margin-top:12px}
+    .method{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+    @media(max-width:820px){.method{grid-template-columns:1fr}}
+    .method .card{padding:18px}
+    .method h4{font-size:13.5px;color:var(--volt-deep);margin-bottom:6px}
+    .method p{font-size:13px;color:var(--muted)}
+    .method code{background:#f3f5f7;padding:1px 5px;border-radius:4px;font-size:12px;color:var(--navy)}
 
-    /* RECS */
-    .recs{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
-    @media(max-width:1080px){.recs{grid-template-columns:repeat(2,1fr)}}
-    @media(max-width:620px){.recs{grid-template-columns:1fr}}
-    .rec-col{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:20px;display:flex;flex-direction:column;gap:13px}
-    .rec-col.kill{border-top:3px solid var(--red)}
-    .rec-col.review{border-top:3px solid #ff7aa2}
-    .rec-col.improve{border-top:3px solid var(--amber)}
-    .rec-col.keep{border-top:3px solid var(--green)}
-    .rec-col > h3{font-size:18px;display:flex;align-items:center;gap:9px}
-    .rec-item{border:1px solid var(--line);border-radius:var(--radius-sm);padding:14px 15px;background:var(--bg2)}
-    .rec-item .rt{font-weight:600;font-size:14.5px}
-    .rec-item .rm{font-size:12px;color:var(--volt-dim);font-weight:600;margin:3px 0 7px;font-variant-numeric:tabular-nums}
-    .rec-item .rw{font-size:13px;color:var(--muted);line-height:1.5}
-
-    /* methodology */
-    .method{display:grid;grid-template-columns:repeat(2,1fr);gap:16px;margin-top:8px}
-    @media(max-width:760px){.method{grid-template-columns:1fr}}
-    .method .card{padding:20px}
-    .method h4{font-size:14.5px;color:var(--volt);margin-bottom:8px;font-family:'Space Grotesk'}
-    .method p{font-size:13.5px;color:var(--muted)}
-    .method code{background:var(--bg);padding:2px 6px;border-radius:5px;font-size:12px;color:var(--cyan)}
-
-    footer{padding:50px 0 70px;border-top:1px solid var(--line);color:var(--faint);font-size:13px}
-    footer .wrap{display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap;align-items:center}
-
-    .note-sm{font-size:12.5px;color:var(--faint);margin-top:14px}
+    footer{background:var(--navy);color:#aab3c2;padding:40px 0;margin-top:10px}
+    footer .wrap{display:flex;justify-content:space-between;gap:18px;flex-wrap:wrap;align-items:center;font-size:13px}
+    footer .brand{color:#fff}
   </style>
 </head>
 <body>
   <header class="nav">
     <div class="wrap nav-inner">
-      <div class="brand"><span class="dot"></span> Volt · Feature Report</div>
+      <div class="brand"><span class="bolt">⚡</span> Volt</div>
       <nav class="nav-links">
+        <a href="#segmentos">Segmentos</a>
+        <a href="#shortcuts">Shortcuts</a>
+        <a href="#features">Funcionalidades</a>
+        <a href="#tabla">Tabla</a>
         <a href="#outliers">Outliers</a>
-        <a href="#top">Más usadas</a>
-        <a href="#groups">Grupos</a>
-        <a href="#map">Mapa de decisión</a>
-        <a href="#recs">Recomendaciones</a>
-        <a href="#method">Metodología</a>
       </nav>
     </div>
   </header>
 
   <main class="wrap">
-    <!-- HERO -->
     <section class="hero" style="border-top:0">
-      <span class="eyebrow"><span class="dot" style="width:7px;height:7px;border-radius:2px;background:var(--volt);display:inline-block"></span> PostHog · Volt Prd · 180 días</span>
-      <h1>Qué features de Volt <span class="hl">importan</span>, y cuáles no.</h1>
-      <p class="lead">Análisis profundo del uso real de cada funcionalidad: las más usadas, el promedio por usuario, el efecto de los power-users que inflan las métricas, y una recomendación clara de qué mantener y qué matar.</p>
+      <span class="eyebrow">⚡ PostHog · Volt Prd · 180 días</span>
+      <h1>Uso de funcionalidades por <span class="u">segmento</span>.</h1>
+      <p class="lead">Cada funcionalidad de Volt dividida en <b style="color:var(--free)">Free</b>, <b style="color:var(--premium)">Premium</b> y <b style="color:var(--employee)">Employee</b>. Donde un usuario infla el promedio, lo identificamos y lo sacamos para mostrar el dato real.</p>
       <div class="period">
         <span>Período: <b>1 ene → 30 jun 2026</b></span>
-        <span>Fuente: <b>PostHog · proyecto Volt Prd</b></span>
-        <span>Generado: <b>30 jun 2026</b></span>
+        <span>Base activa: <b>~688 usuarios identificados</b></span>
       </div>
-      <div class="kpis" id="kpis"></div>
+      <div class="segcards" id="segcards"></div>
     </section>
 
-    <!-- OUTLIERS -->
-    <section id="outliers">
+    <section id="segmentos">
       <div class="sec-head">
-        <div class="sec-tag">El problema del promedio</div>
-        <h2>La media miente. Los power-users la inflan.</h2>
-        <p>En casi todas las features, un puñado de usuarios extremos dispara el promedio muy por encima de lo que vive el usuario típico. Por eso el número <b>"real" es la mediana</b> (resistente a outliers), no la media. Acá está la brecha, feature por feature.</p>
+        <div class="sec-tag">Peso de cada segmento</div>
+        <h2>Quién genera el uso</h2>
+        <p>Eventos totales y promedio por usuario en cada segmento.</p>
+      </div>
+      <div class="card"><div id="chart-seg" class="chart"></div></div>
+    </section>
+
+    <section id="shortcuts">
+      <div class="sec-head">
+        <div class="sec-tag">Modo de interacción dominante</div>
+        <h2>Shortcuts: el promedio por segmento</h2>
+        <p>Shortcuts es la forma más usada de operar Volt. Promedio de atajos por usuario, con y sin el usuario outlier de cada segmento.</p>
       </div>
       <div class="card">
-        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:8px">
-          <strong style="font-family:'Space Grotesk';font-size:15px">Media vs. número real (por usuario activo)</strong>
+        <div class="controls">
+          <div class="seg-legend" id="sc-legend"></div>
+          <div class="toggle" id="sc-toggle">
+            <button data-m="m" class="on">Promedio</button>
+            <button data-m="me">Sin outlier</button>
+            <button data-m="md">Mediana</button>
+          </div>
         </div>
-        <div id="chart-outlier" class="chart tall"></div>
-        <div class="legend">
-          <span><i style="background:#3a3f52"></i> Media (inflada por outliers)</span>
-          <span><i style="background:var(--cyan)"></i> Media recortada (sin top 5%)</span>
-          <span><i style="background:var(--volt)"></i> Mediana — el número real</span>
+        <div id="chart-shortcuts" class="chart mid"></div>
+      </div>
+      <div class="note-sm" id="sc-note"></div>
+    </section>
+
+    <section id="features">
+      <div class="sec-head">
+        <div class="sec-tag">Todas las funcionalidades</div>
+        <h2>Uso promedio por usuario · por segmento</h2>
+        <p>Cada grupo de funcionalidades, comparando Free / Premium / Employee. Cambiá entre promedio, promedio sin el usuario outlier, y mediana.</p>
+      </div>
+      <div class="card">
+        <div class="controls">
+          <div class="seg-legend" id="grp-legend"></div>
+          <div class="toggle" id="grp-toggle">
+            <button data-m="m" class="on">Promedio</button>
+            <button data-m="me">Sin outlier</button>
+            <button data-m="md">Mediana</button>
+          </div>
         </div>
-      </div>
-      <div class="callout">
-        <div class="big">Sobre <b>2.929</b> personas registradas, la mediana de actividad es de <b>solo 2 eventos</b> — pero la media es <b>1.924</b>.</div>
-        <p>La base real de producto es de <b style="color:var(--text)">~872 usuarios activos</b>; el resto son sesiones anónimas o de un solo toque. Y dentro de esa base, el top 5% genera entre el <b style="color:var(--text)">45% y el 75%</b> de los eventos de cada feature. Toda lectura de "promedio" sin recortar outliers sobreestima groseramente el uso real.</p>
+        <div id="chart-groups" class="chart tall"></div>
       </div>
     </section>
 
-    <!-- TOP FEATURES -->
-    <section id="top">
+    <section id="tabla">
       <div class="sec-head">
-        <div class="sec-tag">Ranking</div>
-        <h2>Las features más usadas</h2>
-        <p>Dos lecturas distintas: por <b>alcance</b> (cuántos usuarios distintos la tocan) y por <b>volumen</b> (cuántos eventos totales genera). No siempre coinciden: Broadcast es enorme en volumen pero diminuto en alcance.</p>
+        <div class="sec-tag">Detalle</div>
+        <h2>Tabla por funcionalidad y segmento</h2>
+        <p>Usuarios, promedio y mediana por segmento. La marca <span class="flag">outlier</span> aparece cuando un solo usuario concentra ≥30% del uso. Click para ordenar.</p>
       </div>
-      <div style="display:flex;justify-content:flex-end;margin-bottom:16px">
-        <div class="toggle" id="top-toggle">
-          <button data-mode="users" class="on">Por alcance (usuarios)</button>
-          <button data-mode="total">Por volumen (eventos)</button>
-        </div>
-      </div>
-      <div class="card"><div id="chart-top" class="chart tall"></div></div>
+      <div class="table-wrap"><table id="tbl"><thead></thead><tbody></tbody></table></div>
     </section>
 
-    <!-- GROUPS TABLE -->
-    <section id="groups">
+    <section id="outliers">
       <div class="sec-head">
-        <div class="sec-tag">Vista por área de producto</div>
-        <h2>Grupos de features: adopción y profundidad</h2>
-        <p>Agrupé los ~250 eventos crudos en áreas lógicas de producto (separando infraestructura/telemetría). <b>Adopción</b> = % de los 872 usuarios activos que la tocan. <b>Mediana/usuario</b> = profundidad real de uso. Hacé click en cualquier columna para ordenar.</p>
+        <div class="sec-tag">Usuarios que inflan el promedio</div>
+        <h2>Outliers detectados</h2>
+        <p>Funcionalidades donde un único usuario concentra gran parte del uso. Mostramos el promedio crudo vs. el promedio sin ese usuario, y quién es (anonimizado).</p>
       </div>
-      <div class="table-wrap">
-        <table id="groups-table">
-          <thead>
-            <tr>
-              <th data-k="name">Grupo de features</th>
-              <th data-k="adoption" class="num">Adopción</th>
-              <th data-k="users" class="num">Usuarios</th>
-              <th data-k="totalEvents" class="num">Eventos</th>
-              <th data-k="median" class="num">Mediana/u.</th>
-              <th data-k="mean" class="num">Media/u.</th>
-              <th data-k="verdict">Veredicto</th>
-            </tr>
-          </thead>
-          <tbody></tbody>
-        </table>
-      </div>
-      <p class="note-sm">Auth &amp; Login se muestra como referencia pero es infraestructura (no es feature de producto). La adopción se calcula sobre la base activa de 872 usuarios.</p>
+      <div class="out-grid" id="outliers"></div>
     </section>
 
-    <!-- DECISION MAP -->
-    <section id="map">
+    <section id="meetzoom">
       <div class="sec-head">
-        <div class="sec-tag">Mapa de decisión</div>
-        <h2>Matar, vigilar o mantener</h2>
-        <p>Cada burbuja es un grupo de features. Eje X = <b>alcance</b> (% de usuarios). Eje Y = <b>profundidad</b> (mediana de usos por usuario, escala log). Tamaño = volumen total de eventos. Abajo-izquierda = candidatas a matar; arriba-derecha = críticas.</p>
+        <div class="sec-tag">Caso /meet y /zoom</div>
+        <h2>Acá no hay outlier: simplemente se usa poco</h2>
+        <p>A diferencia de Broadcast, los comandos de reunión tienen promedios bajos y planos — ningún usuario los dispara.</p>
       </div>
-      <div class="card"><div id="chart-map" class="chart tall"></div></div>
-      <div class="legend" id="map-legend"></div>
+      <div class="card"><div id="chart-meetzoom" class="chart"></div></div>
     </section>
 
-    <!-- RECOMMENDATIONS -->
-    <section id="recs">
-      <div class="sec-head">
-        <div class="sec-tag">Recomendaciones</div>
-        <h2>Qué hacer con cada cosa</h2>
-        <p>Regla consistente: una feature se mantiene si tiene <b>alta reach</b> (le importa a muchos) <b>o</b> <b>alta profundidad</b> (los pocos que la usan la usan mucho). Solo se mata lo que falla en <b>ambas</b> y no tiene valor estratégico. La pregunta no es "¿genera eventos?" sino "¿a quién y cuánto le importa?".</p>
-      </div>
-      <div class="callout" style="margin-top:0;margin-bottom:26px;border-color:rgba(255,122,162,.3)">
-        <div class="big" style="font-size:clamp(18px,2.4vw,22px)">⚠️ Advertencia clave: <b style="color:#ff7aa2">no hay datos de revenue</b> en este análisis.</div>
-        <p>Las decisiones de matar/mantener se basan <b>solo en uso anónimo</b>. Features de bajo alcance pero alta profundidad como <b style="color:var(--text)">HubSpot</b> y <b style="color:var(--text)">CRM/Tickets</b> pueden estar ancladas a tus cuentas más caras. Por eso <b style="color:var(--text)">no van a "matar"</b> sino a <b style="color:#ff7aa2">"revisar con datos de revenue"</b>: matar la integración que sostiene tus contratos grandes porque pocos asientos la tocan es el error clásico de survivorship.</p>
-      </div>
-      <div class="recs" id="recs"></div>
-    </section>
-
-    <!-- METHODOLOGY -->
     <section id="method">
-      <div class="sec-head">
-        <div class="sec-tag">Cómo se calculó</div>
-        <h2>Metodología y advertencias</h2>
-      </div>
+      <div class="sec-head"><div class="sec-tag">Cómo se calculó</div><h2>Metodología</h2></div>
       <div class="method">
-        <div class="card"><h4>Ventana y fuente</h4><p>180 días (1 ene–30 jun 2026) sobre la tabla <code>events</code> de PostHog, proyecto <code>Volt Prd</code> (producción). 5,64M eventos, 2.929 personas.</p></div>
-        <div class="card"><h4>Número "real" vs. promedio</h4><p>Reportamos <b>mediana</b> como número representativo y una <b>media recortada</b> que excluye el top 5% de usuarios (corte P95) por feature. La media simple queda como referencia de cuánto inflan los outliers.</p></div>
-        <div class="card"><h4>Base de usuarios activos</h4><p>Adopción calculada sobre <b>872 usuarios activos de producto</b> (hicieron Chat Open / Opened App / identify / fueron creados), no sobre las 2.929 sesiones totales que incluyen anónimos.</p></div>
-        <div class="card"><h4>Features vs. infraestructura</h4><p>Eventos de pipeline (<code>transcription.*</code>), sincronización, identidad (<code>$set</code>, <code>$identify</code>) y telemetría se separaron en "Infraestructura" y se excluyen del scoring de matar/mantener.</p></div>
-        <div class="card"><h4>Privacidad</h4><p>Repositorio público: solo datos <b>agregados y anónimos</b>. No se exponen emails ni identidades; los outliers se tratan estadísticamente por percentil.</p></div>
-        <div class="card"><h4>Cobertura de eventos</h4><p>Los 22 grupos de producto agrupan <b>3,82M</b> de los <b>5,64M</b> eventos totales. El ~32% restante es infraestructura, sincronización, identidad y telemetría — excluido a propósito del scoring de features.</p></div>
-        <div class="card"><h4>Snapshot</h4><p>Foto estática al 30 jun 2026. Regenerable corriendo de nuevo las queries HogQL contra PostHog y actualizando <code>data.js</code>.</p></div>
-      </div>
-      <div class="card" style="margin-top:16px;border-color:var(--line2)">
-        <h4 style="color:var(--amber);font-family:'Space Grotesk';font-size:14.5px;margin-bottom:10px">Qué NO cubre este reporte (próximos pasos)</h4>
-        <p style="font-size:13.5px;color:var(--muted)">
-          <b style="color:var(--text)">· Tendencia temporal:</b> es un agregado de 180 días sin eje de tiempo. Un corte 30d vs 30d previos diría si cada feature crece o muere — clave para confirmar apuestas como MCP.<br/>
-          <b style="color:var(--text)">· Retención/stickiness:</b> "reach" y "mediana" son acumulados; no distinguen "probó una vez" de "usa todas las semanas". Una tasa de re-uso (% de adopters activos en 2+ semanas) volvería defendibles los juicios de "pegajosa / no engancha".<br/>
-          <b style="color:var(--text)">· Revenue / tier de cuenta:</b> sin esto, las features de bajo alcance y alta profundidad (HubSpot, CRM) no pueden decidirse. Es el dato que falta para cerrar el bucket "revisar".<br/>
-          <b style="color:var(--text)">· Confianza en n chico:</b> HubSpot (14), CRM (~14), Broadcast (~13 que envían) tienen estadísticos ruidosos. Tratar sus números como señales, no como verdades de precisión.
-        </p>
+        <div class="card"><h4>Segmentos</h4><p>Propiedad <code>status</code> de cada persona: <code>free</code>, <code>premium</code>, <code>employee</code>. Anónimos y churned quedan fuera.</p></div>
+        <div class="card"><h4>Outlier</h4><p>Por cada funcionalidad×segmento se identifica al usuario con más usos. "Sin outlier" = promedio recalculado sin él. La mediana es el número resistente.</p></div>
+        <div class="card"><h4>Privacidad</h4><p>Datos agregados. El usuario outlier se muestra anonimizado (primeros 8 caracteres del id). Sin emails ni nombres.</p></div>
       </div>
     </section>
   </main>
 
   <footer>
     <div class="wrap">
-      <span>Volt · Reporte de uso de features — generado desde PostHog (Volt Prd) · 180 días.</span>
-      <span>Datos agregados y anónimos · Snapshot 30 jun 2026</span>
+      <span class="brand">⚡ Volt</span>
+      <span>Revisión de funcionalidades · PostHog Volt Prd · 180 días · snapshot 30 jun 2026 · datos agregados</span>
     </div>
   </footer>
 
