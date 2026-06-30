@@ -46,6 +46,31 @@
       <div class="row"><span>Eventos / usuario</span><b>${full(s.perUser)}</b></div>
     </div>`).join("");
 
+  /* ---- KEY FEATURES (handbook) ---- */
+  let kfMetric = "m";
+  function renderKF() {
+    document.getElementById("keyfeatures").innerHTML = D.keyFeatures.map(f => {
+      const vals = SEG_ORDER.map(k => f.seg[k] ? (f.seg[k][kfMetric] || 0) : 0);
+      const max = Math.max(...vals, 1);
+      const rows = SEG_ORDER.map(k => {
+        const s = f.seg[k]; if (!s) return "";
+        const v = s[kfMetric] || 0;
+        const w = Math.max(3, (v / max) * 100);
+        return `<div class="kf-row">
+          <span class="lab"><i style="background:${SEG[k]}"></i>${k}</span>
+          <span class="track"><span class="fill" style="width:${w}%;background:${SEG[k]}"></span></span>
+          <span class="val">${full(v)} <span class="u">${s.u}u</span></span>
+        </div>`;
+      }).join("");
+      return `<div class="kf-card">
+        <div class="top"><span class="ic">${f.icon}</span><div><div class="nm">${f.name}</div><div class="ds">${f.desc}</div></div></div>
+        <div class="kf-seg">${rows}</div>
+      </div>`;
+    }).join("");
+  }
+  renderKF();
+  bindToggle("kf-toggle", (m) => { kfMetric = m; renderKF(); });
+
   /* ---- segment legend (shared) ---- */
   const segLegendHTML = SEG_ORDER.map(k => `<span><i style="background:${SEG[k]}"></i>${k}</span>`).join("");
   document.getElementById("sc-legend").innerHTML = segLegendHTML;

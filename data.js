@@ -140,6 +140,55 @@ window.VOLT_DATA = {
     { cmd: "/zoom (completado)", u: 12, t: 26,  m: 2.2, md: 2.0, tp: 15.4, tu: "361a5123", me: 2.0 }
   ],
 
+  // FUNCIONALIDADES CLAVE — las del handbook de Volt (las que más interesa medir).
+  // Cada una con uso por segmento: u=usuarios, m=promedio, md=mediana, me=promedio sin outlier.
+  keyFeatures: [
+    { icon: "🎙️", name: "Transcripción de voz", desc: "Audios de WhatsApp → texto y resumen con IA. Leé, no escuches.", seg: {
+        Free:     { u: 350, m: 510.1,  md: 54.0,  me: 487.3 },
+        Premium:  { u: 139, m: 1400.3, md: 903.0, me: 1356.0 },
+        Employee: { u: 16,  m: 823.9,  md: 453.0, me: 682.5 } } },
+    { icon: "⌨️", name: "Atajos de teclado", desc: "Operá todo Volt sin tocar el mouse. +50 shortcuts.", seg: {
+        Free:     { u: 344, m: 220.9,  md: 35.0,  me: 207.8 },
+        Premium:  { u: 140, m: 1626.1, md: 565.0, me: 1550.4 },
+        Employee: { u: 18,  m: 1212.2, md: 245.5, me: 795.3 } } },
+    { icon: "⏰", name: "Mensajes programados", desc: "Escribí ahora, enviá en el momento perfecto (Send Later).", seg: {
+        Free:     { u: 396, m: 12.9, md: 6.0,  me: 12.6 },
+        Premium:  { u: 136, m: 83.2, md: 25.0, me: 66.0 },
+        Employee: { u: 16,  m: 95.3, md: 31.5, me: 71.9 } } },
+    { icon: "✅", name: "Tareas y recordatorios", desc: "Mensajes → tareas y recordatorios. Nada se escapa.", seg: {
+        Free:     { u: 208, m: 6.0,  md: 2.0, me: 5.8 },
+        Premium:  { u: 104, m: 17.0, md: 8.0, me: 14.1 },
+        Employee: { u: 17,  m: 22.6, md: 5.0, me: 16.1 } } },
+    { icon: "📂", name: "Listas y workspaces", desc: "Chats y grupos ordenados en listas y espacios de trabajo.", seg: {
+        Free:     { u: 358, m: 16.9,  md: 3.0,  me: 13.3 },
+        Premium:  { u: 131, m: 547.7, md: 15.0, me: 475.5 },
+        Employee: { u: 18,  m: 167.2, md: 49.0, me: 131.8 } } },
+    { icon: "📢", name: "Broadcast", desc: "Mensajes personalizados a cientos de contactos a la vez.", seg: {
+        Free:     { u: 57, m: 41.3,   md: 1.0, me: 27.1 },
+        Premium:  { u: 32, m: 1647.9, md: 2.0, me: 1160.2 },
+        Employee: { u: 9,  m: 55.6,   md: 3.0, me: 4.5 } } },
+    { icon: "🎥", name: "/meet y /zoom", desc: "Link de reunión en segundos, sin salir del chat.", seg: {
+        Free:     { u: 46, m: 4.9,  md: 2.0,  me: 4.2 },
+        Premium:  { u: 54, m: 8.7,  md: 4.0,  me: 7.8 },
+        Employee: { u: 9,  m: 16.4, md: 19.0, me: 14.8 } } },
+    { icon: "🧩", name: "App Store / Integraciones", desc: "Conectá Meet, Zoom, HubSpot, Claude, Zendesk y más.", seg: {
+        Free:     { u: 108, m: 4.2,  md: 2.0,  me: 4.0 },
+        Premium:  { u: 55,  m: 5.7,  md: 2.0,  me: 4.8 },
+        Employee: { u: 8,   m: 25.6, md: 16.5, me: 16.6 } } },
+    { icon: "🔒", name: "Modo privado", desc: "Blurrea tus chats al compartir pantalla (⌘D).", seg: {
+        Free:     { u: 46, m: 4.9,  md: 2.0, me: 4.5 },
+        Premium:  { u: 43, m: 5.7,  md: 3.0, me: 5.0 },
+        Employee: { u: 8,  m: 28.0, md: 5.0, me: 19.7 } } },
+    { icon: "🤖", name: "IA (Claude / ChatGPT)", desc: "Conectá tu IA a Volt con acceso a tus chats (MCP).", seg: {
+        Free:     { u: 109, m: 78.6,  md: 3.0,  me: 52.8 },
+        Premium:  { u: 64,  m: 394.3, md: 4.0,  me: 274.0 },
+        Employee: { u: 9,   m: 26.4,  md: 12.0, me: 14.6 } } },
+    { icon: "💬", name: "Nuevo chat", desc: "Escribile a cualquier número sin tenerlo agendado.", seg: {
+        Free:     { u: 33, m: 4.3,  md: 2.0,  me: 3.4 },
+        Premium:  { u: 69, m: 15.4, md: 4.0,  me: 12.2 },
+        Employee: { u: 6,  m: 18.0, md: 10.5, me: 10.6 } } }
+  ],
+
   // Lookup de usuarios outlier → nombre + teléfono (para etiquetar outliers por nombre)
   users: {
     "00a9ef57": { n: "Jose Murillo",                 p: "14132306735" },
